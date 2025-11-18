@@ -1,0 +1,9 @@
+{
+  "name": "Gemini Cupid",
+  "description": "A modern dating app experience powered by Gemini. Browse profiles, find matches, and break the ice with AI-generated conversation starters.",
+  "requestFramePermissions": [
+    "microphone",
+    "camera",
+    "geolocation"
+  ]
+}

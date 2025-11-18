@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { User, Match, Message } from './types';
 import { USERS as initialUsers, CURRENT_USER_ID, EMOJIS } from './constants';
@@ -126,7 +127,7 @@ const SwipeableProfileCard: React.FC<{
         <div
             ref={cardRef}
             className="absolute top-0 left-0 w-full h-full rounded-2xl overflow-hidden shadow-2xl bg-white select-none cursor-grab active:cursor-grabbing"
-            style={{ ...propStyle, ...style, touchAction: 'none' }}
+            style={{ ...propStyle, ...(isTop ? style : {}), touchAction: 'none' }}
             onPointerDown={isTop ? handlePointerDown : undefined}
             onPointerMove={isTop ? handlePointerMove : undefined}
             onPointerUp={isTop ? handlePointerUp : undefined}
@@ -163,7 +164,7 @@ const SwipeableProfileCard: React.FC<{
                         <p className="text-white text-lg mt-2 drop-shadow-md line-clamp-2">{user.bio}</p>
                     </div>
                      {isTop && (
-                         <button onClick={(e) => { e.stopPropagation(); onBlock(user.id); }} className="text-white/60 hover:text-white transition-colors p-2 rounded-full bg-black/30 backdrop-blur-sm" aria-label={`Block ${user.name}`}>
+                         <button title="Block User" onClick={(e) => { e.stopPropagation(); onBlock(user.id); }} className="text-white/60 hover:text-white transition-colors p-2 rounded-full bg-black/30 backdrop-blur-sm" aria-label={`Block ${user.name}`}>
                              <ShieldExclamationIcon className="w-6 h-6" />
                          </button>
                      )}
@@ -178,7 +179,7 @@ const ProfileDetailScreen: React.FC<{ user: User; onClose: () => void }> = ({ us
         <div className="absolute inset-0 bg-black/30 backdrop-blur-sm z-40 flex justify-center items-end" onClick={onClose}>
             <div className="bg-white w-full max-w-md h-[90vh] rounded-t-3xl shadow-xl relative animate-slide-up overflow-y-auto" onClick={e => e.stopPropagation()}>
                 <div className="p-4 sticky top-0 bg-white z-10 flex justify-end">
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 bg-gray-100 rounded-full p-2">
+                    <button title="Close" onClick={onClose} className="text-gray-400 hover:text-gray-600 bg-gray-100 rounded-full p-2">
                         <XMarkIcon className="w-6 h-6"/>
                     </button>
                 </div>
@@ -294,7 +295,7 @@ const RequestsScreen: React.FC<{
     return (
         <div className="flex flex-col h-full bg-white">
             <header className="flex items-center p-4 border-b sticky top-0 bg-white z-10">
-                <button onClick={onBack} className="text-gray-600 mr-4 text-2xl" aria-label="Go back">&larr;</button>
+                <button title="Back" onClick={onBack} className="text-gray-600 mr-4 text-2xl" aria-label="Go back">&larr;</button>
                 <h2 className="font-bold text-xl text-gray-800">Friend Requests</h2>
             </header>
             <div className="p-4 h-full overflow-y-auto">
@@ -308,10 +309,10 @@ const RequestsScreen: React.FC<{
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex flex-col justify-end p-3">
                                     <h3 className="font-bold text-lg text-white drop-shadow mb-10">{user.name}, {user.age}</h3>
                                     <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-6">
-                                        <button onClick={() => onReject(user.id)} className="bg-white/90 backdrop-blur-sm rounded-full p-3 text-red-500 hover:scale-110 transition-transform shadow-md" aria-label={`Pass on ${user.name}`}>
+                                        <button title="Pass" onClick={() => onReject(user.id)} className="bg-white/90 backdrop-blur-sm rounded-full p-3 text-red-500 hover:scale-110 transition-transform shadow-md" aria-label={`Pass on ${user.name}`}>
                                             <XMarkIcon className="w-6 h-6" />
                                         </button>
-                                        <button onClick={() => onAccept(user.id)} className="bg-white/90 backdrop-blur-sm rounded-full p-4 text-pink-500 hover:scale-110 transition-transform shadow-md" aria-label={`Match with ${user.name}`}>
+                                        <button title="Accept" onClick={() => onAccept(user.id)} className="bg-white/90 backdrop-blur-sm rounded-full p-4 text-pink-500 hover:scale-110 transition-transform shadow-md" aria-label={`Match with ${user.name}`}>
                                             <HeartIcon className="w-7 h-7" />
                                         </button>
                                     </div>
@@ -331,22 +332,22 @@ const Header: React.FC<{ activeView: string, setActiveView: (view: string) => vo
     const activeClass = "text-pink-500";
     return (
         <header className="flex justify-around items-center bg-white p-2 rounded-t-3xl shadow-md">
-             <button onClick={() => setActiveView('profile')} className={`${baseClass} ${activeView === 'profile' ? activeClass : ''}`} aria-label="Edit Profile">
+             <button title="Profile" onClick={() => setActiveView('profile')} className={`${baseClass} ${activeView === 'profile' ? activeClass : ''}`} aria-label="Edit Profile">
                 <UserIcon className="w-8 h-8"/>
             </button>
-            <button onClick={() => setActiveView('swipe')} className={`${baseClass} ${activeView === 'swipe' ? activeClass : ''}`} aria-label="Swipe">
+            <button title="Swipe" onClick={() => setActiveView('swipe')} className={`${baseClass} ${activeView === 'swipe' ? activeClass : ''}`} aria-label="Swipe">
                 <FireIcon className="w-8 h-8"/>
             </button>
-             <button onClick={() => setActiveView('requests')} className={`${baseClass} ${activeView === 'requests' ? activeClass : ''}`} aria-label="Friend Requests">
+             <button title="Friend Requests" onClick={() => setActiveView('requests')} className={`${baseClass} ${activeView === 'requests' ? activeClass : ''}`} aria-label="Friend Requests">
                 <UserPlusIcon className="w-8 h-8"/>
                 {requestsCount > 0 && (
                     <span className="absolute top-1 right-1 block w-5 h-5 bg-pink-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{requestsCount}</span>
                 )}
             </button>
-             <button onClick={() => setActiveView('filters')} className={`${baseClass} ${activeView === 'filters' ? activeClass : ''}`} aria-label="Filters">
+             <button title="Filters" onClick={() => setActiveView('filters')} className={`${baseClass} ${activeView === 'filters' ? activeClass : ''}`} aria-label="Filters">
                 <AdjustmentsHorizontalIcon className="w-8 h-8"/>
             </button>
-            <button onClick={() => setActiveView('matches')} className={`${baseClass} ${activeView === 'matches' ? activeClass : ''}`} aria-label="View Matches">
+            <button title="Matches" onClick={() => setActiveView('matches')} className={`${baseClass} ${activeView === 'matches' ? activeClass : ''}`} aria-label="View Matches">
                 <ChatBubbleIcon className="w-8 h-8"/>
             </button>
         </header>
@@ -431,7 +432,7 @@ const AudioPlayer: React.FC<{ base64Content: string; isCurrentUser: boolean }> =
 
     return (
         <div className={`flex items-center gap-2 w-56 p-2 rounded-lg ${isCurrentUser ? 'bg-pink-600' : 'bg-gray-300'}`}>
-            <button onClick={togglePlay} className={`text-white ${isCurrentUser ? 'text-white' : 'text-gray-800'}`}>
+            <button title={isPlaying ? "Pause" : "Play"} onClick={togglePlay} className={`text-white ${isCurrentUser ? 'text-white' : 'text-gray-800'}`}>
                 {isPlaying ? <PauseIcon className="w-6 h-6" /> : <PlayIcon className="w-6 h-6" />}
             </button>
             <div className="flex-1 h-2 bg-white/30 rounded-full">
@@ -499,13 +500,13 @@ const VideoCallScreen: React.FC<{ user: User; onEndCall: () => void }> = ({ user
 
             {/* Controls */}
             <div className="absolute bottom-0 left-0 right-0 bg-black/30 backdrop-blur-sm p-4 flex justify-center items-center gap-6">
-                <button onClick={toggleMute} className={`p-3 rounded-full transition-colors ${isMuted ? 'bg-white text-black' : 'bg-white/20 text-white'}`}>
+                <button title={isMuted ? "Unmute" : "Mute"} onClick={toggleMute} className={`p-3 rounded-full transition-colors ${isMuted ? 'bg-white text-black' : 'bg-white/20 text-white'}`}>
                     {isMuted ? <MicrophoneSlashIcon className="w-6 h-6" /> : <MicrophoneIcon className="w-6 h-6" />}
                 </button>
-                 <button onClick={toggleCamera} className={`p-3 rounded-full transition-colors ${isCameraOff ? 'bg-white text-black' : 'bg-white/20 text-white'}`}>
+                 <button title={isCameraOff ? "Turn Camera On" : "Turn Camera Off"} onClick={toggleCamera} className={`p-3 rounded-full transition-colors ${isCameraOff ? 'bg-white text-black' : 'bg-white/20 text-white'}`}>
                     {isCameraOff ? <VideoCameraSlashIcon className="w-6 h-6" /> : <VideoCameraIcon className="w-6 h-6" />}
                 </button>
-                <button onClick={onEndCall} className="p-4 bg-red-500 rounded-full text-white">
+                <button title="End Call" onClick={onEndCall} className="p-4 bg-red-500 rounded-full text-white">
                     <PhoneIcon className="w-7 h-7 transform -scale-x-100" />
                 </button>
             </div>
@@ -626,10 +627,10 @@ const ChatScreen: React.FC<{
         <div className="flex flex-col h-full bg-white relative">
             {isVideoCallActive && <VideoCallScreen user={user} onEndCall={() => setIsVideoCallActive(false)} />}
             <header className="flex items-center p-4 border-b sticky top-0 bg-white z-10">
-                <button onClick={onBack} className="text-gray-600 mr-4 text-2xl" aria-label="Back to matches">&larr;</button>
+                <button title="Back" onClick={onBack} className="text-gray-600 mr-4 text-2xl" aria-label="Back to matches">&larr;</button>
                 <img src={user.imageUrl} alt={user.name} className="w-10 h-10 rounded-full object-cover mr-3" />
                 <h2 className="font-bold text-lg text-gray-800 flex-1">{user.name}</h2>
-                <button onClick={() => setIsVideoCallActive(true)} className="text-gray-500 hover:text-pink-500 p-2">
+                <button title="Video Call" onClick={() => setIsVideoCallActive(true)} className="text-gray-500 hover:text-pink-500 p-2">
                     <VideoCameraIcon className="w-6 h-6"/>
                 </button>
             </header>
@@ -723,6 +724,7 @@ const ChatScreen: React.FC<{
                         onKeyDown={(e) => e.key === 'Enter' && handleSendText()}
                     />
                      <button
+                        title="Generate Replies"
                         onClick={handleGenerateReplies}
                         disabled={isLoadingReplies}
                         className="p-2 text-gray-500 hover:text-pink-500 disabled:opacity-50 disabled:cursor-wait"
@@ -730,12 +732,13 @@ const ChatScreen: React.FC<{
                      >
                          <BoltIcon className={`w-6 h-6 ${isLoadingReplies ? 'animate-pulse text-yellow-500' : ''}`} />
                      </button>
-                     <button onClick={toggleEmojiPanel} className="p-2 text-gray-500 hover:text-pink-500">
+                     <button title="Emoji" onClick={toggleEmojiPanel} className="p-2 text-gray-500 hover:text-pink-500">
                          <FaceSmileIcon className="w-6 h-6" />
                      </button>
                     
                     {inputValue.trim() === '' ? (
                         <button
+                            title="Record Voice"
                             onMouseDown={handleStartRecording}
                             onMouseUp={handleStopRecording}
                             onTouchStart={handleStartRecording}
@@ -746,7 +749,7 @@ const ChatScreen: React.FC<{
                             <MicrophoneIcon className="w-6 h-6" />
                         </button>
                     ) : (
-                        <button onClick={handleSendText} className="bg-gradient-to-r from-pink-500 to-orange-400 text-white font-semibold rounded-full px-5 py-2">Send</button>
+                        <button title="Send" onClick={handleSendText} className="bg-gradient-to-r from-pink-500 to-orange-400 text-white font-semibold rounded-full px-5 py-2">Send</button>
                     )}
                  </div>
             </div>
@@ -799,7 +802,7 @@ const ProfileEditScreen: React.FC<{
     return (
         <div className="flex flex-col h-full bg-white">
             <header className="flex items-center p-4 border-b sticky top-0 bg-white z-10">
-                <button onClick={onBack} className="text-gray-600 mr-4 text-2xl" aria-label="Go back">&larr;</button>
+                <button title="Back" onClick={onBack} className="text-gray-600 mr-4 text-2xl" aria-label="Go back">&larr;</button>
                 <h2 className="font-bold text-xl text-gray-800">Edit Profile</h2>
             </header>
             <form onSubmit={handleSubmit} className="p-6 space-y-6 flex-1 overflow-y-auto">
@@ -828,7 +831,7 @@ const ProfileEditScreen: React.FC<{
                         {formData.interests.map(interest => (
                             <span key={interest} className="flex items-center bg-pink-100 text-pink-800 text-sm font-semibold px-3 py-1 rounded-full">
                                 {interest}
-                                <button type="button" onClick={() => handleRemoveInterest(interest)} className="ml-2 text-pink-600 hover:text-pink-800" aria-label={`Remove ${interest} interest`}>
+                                <button title="Remove Interest" type="button" onClick={() => handleRemoveInterest(interest)} className="ml-2 text-pink-600 hover:text-pink-800" aria-label={`Remove ${interest} interest`}>
                                     <XMarkIcon className="w-3 h-3" />
                                 </button>
                             </span>
@@ -836,7 +839,7 @@ const ProfileEditScreen: React.FC<{
                     </div>
                     <div className="flex gap-2">
                         <input type="text" id="add-interest" value={newInterest} onChange={(e) => setNewInterest(e.target.value)} onKeyDown={handleInterestKeyDown} placeholder="Add an interest" className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-pink-500 focus:border-pink-500" />
-                        <button type="button" onClick={handleAddInterest} className="px-4 py-2 bg-pink-500 text-white rounded-md font-semibold hover:bg-pink-600">Add</button>
+                        <button title="Add Interest" type="button" onClick={handleAddInterest} className="px-4 py-2 bg-pink-500 text-white rounded-md font-semibold hover:bg-pink-600">Add</button>
                     </div>
                 </div>
                 
@@ -867,7 +870,7 @@ const ProfileEditScreen: React.FC<{
                                         <img src={blockedUser.imageUrl} alt={blockedUser.name} className="w-10 h-10 rounded-full object-cover" />
                                         <span className="text-gray-800 font-medium">{blockedUser.name}</span>
                                     </div>
-                                    <button type="button" onClick={() => onUnblock(blockedUser.id)} className="text-sm font-semibold text-red-600 hover:text-red-800 transition-colors">
+                                    <button title="Unblock" type="button" onClick={() => onUnblock(blockedUser.id)} className="text-sm font-semibold text-red-600 hover:text-red-800 transition-colors">
                                         Unblock
                                     </button>
                                 </li>
@@ -941,7 +944,7 @@ const FilterScreen: React.FC<{
     return (
         <div className="flex flex-col h-full bg-white">
             <header className="flex items-center p-4 border-b sticky top-0 bg-white z-10">
-                <button onClick={onBack} className="text-gray-600 mr-4 text-2xl" aria-label="Go back">&larr;</button>
+                <button title="Back" onClick={onBack} className="text-gray-600 mr-4 text-2xl" aria-label="Go back">&larr;</button>
                 <h2 className="font-bold text-xl text-gray-800">Filter Profiles</h2>
             </header>
             <div className="p-6 space-y-6 flex-1 overflow-y-auto">
@@ -1403,16 +1406,16 @@ export default function App() {
                 </div>
                 {currentIndex < filteredProfiles.length && (
                     <div className="flex justify-center items-center gap-4 p-4 bg-white/50 backdrop-blur-sm">
-                         <button onClick={handleUndo} disabled={!lastAction} className="bg-white rounded-full p-3 text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg" aria-label="Undo">
+                         <button title="Undo" onClick={handleUndo} disabled={!lastAction} className="bg-white rounded-full p-3 text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg" aria-label="Undo">
                             <UndoIcon className="w-6 h-6" />
                         </button>
-                        <button onClick={() => { currentActionRef.current = 'pass'; setAction('pass'); }} className="bg-white rounded-full p-4 text-red-500 hover:scale-110 transition-transform shadow-lg" aria-label="Pass">
+                        <button title="Pass" onClick={() => { currentActionRef.current = 'pass'; setAction('pass'); }} className="bg-white rounded-full p-4 text-red-500 hover:scale-110 transition-transform shadow-lg" aria-label="Pass">
                             <XMarkIcon className="w-8 h-8" />
                         </button>
-                        <button onClick={() => { currentActionRef.current = 'superlike'; setAction('superlike'); }} className="bg-white rounded-full p-3 text-blue-500 hover:scale-110 transition-transform shadow-lg" aria-label="Super Like">
+                        <button title="Super Like" onClick={() => { currentActionRef.current = 'superlike'; setAction('superlike'); }} className="bg-white rounded-full p-3 text-blue-500 hover:scale-110 transition-transform shadow-lg" aria-label="Super Like">
                             <StarIcon className="w-7 h-7" />
                         </button>
-                        <button onClick={() => { currentActionRef.current = 'like'; setAction('like'); }} className="bg-white rounded-full p-4 text-pink-500 hover:scale-110 transition-transform shadow-lg" aria-label="Like">
+                        <button title="Like" onClick={() => { currentActionRef.current = 'like'; setAction('like'); }} className="bg-white rounded-full p-4 text-pink-500 hover:scale-110 transition-transform shadow-lg" aria-label="Like">
                             <HeartIcon className="w-8 h-8" />
                         </button>
                     </div>

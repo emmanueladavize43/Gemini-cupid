@@ -2,7 +2,20 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { User, Message } from '../types';
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+// Safely access the API key. In some browser environments, 'process' is not defined.
+// We check for its existence to prevent the app from crashing on load.
+const getApiKey = () => {
+  try {
+    if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
+      return process.env.API_KEY;
+    }
+  } catch (e) {
+    // Ignore error if process is not available
+  }
+  return '';
+};
+
+const ai = new GoogleGenAI({ apiKey: getApiKey() });
 
 interface IcebreakerResponse {
   icebreakers: string[];

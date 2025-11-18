@@ -1,3 +1,12 @@
+
+export interface Lifestyle {
+  smoking?: string;
+  drinking?: string;
+  exercise?: string;
+}
+
+export type RelationshipGoal = string;
+
 export interface User {
   id: number;
   name: string;
@@ -13,6 +22,8 @@ export interface User {
   };
   distance?: number;
   profileVisibility: 'public' | 'private';
+  relationshipGoal?: RelationshipGoal;
+  lifestyle?: Lifestyle;
 }
 
 export interface Match {
@@ -28,4 +39,5 @@ export interface Message {
   timestamp: Date;
   type: 'text' | 'sticker' | 'voice';
   content: string; // For voice, this will be base64 audio data URL
+  read?: boolean;
 }

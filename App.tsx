@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { User, Match, Message } from './types';
-import { USERS as initialUsers, CURRENT_USER_ID, EMOJIS } from './constants';
+import { User, Match, Message, RelationshipGoal, Lifestyle } from './types';
+import { INITIAL_USERS, EMOJIS, RELATIONSHIP_GOALS, LIFESTYLE_OPTIONS } from './constants';
 import { generateIcebreakers, generateQuickReplies } from './services/geminiService';
-import { HeartIcon, XMarkIcon, SparklesIcon, ChatBubbleIcon, FireIcon, UserIcon, AdjustmentsHorizontalIcon, EyeIcon, StarIcon, ShieldExclamationIcon, UndoIcon, UserPlusIcon, FaceSmileIcon, BoltIcon, VideoCameraIcon, MicrophoneIcon, PhoneIcon, VideoCameraSlashIcon, MicrophoneSlashIcon, PlayIcon, PauseIcon, MapPinIcon } from './components/Icons';
+import { HeartIcon, XMarkIcon, SparklesIcon, ChatBubbleIcon, FireIcon, UserIcon, AdjustmentsHorizontalIcon, EyeIcon, StarIcon, ShieldExclamationIcon, UndoIcon, UserPlusIcon, FaceSmileIcon, BoltIcon, VideoCameraIcon, MicrophoneIcon, PhoneIcon, VideoCameraSlashIcon, MicrophoneSlashIcon, PlayIcon, PauseIcon, MapPinIcon, GeminiCupidLogo, GoalIcon, SmokingIcon, DrinkingIcon, ExerciseIcon, CheckBadgeIcon, MagnifyingGlassIcon } from './components/Icons';
 
 // --- Animation Constants ---
 const SWIPE_THRESHOLD = 120; // Min drag distance to trigger a swipe
@@ -14,6 +14,12 @@ interface Filters {
   ageRange: { min: number; max: number };
   interests: string[];
   maxDistance: number;
+  relationshipGoal?: string;
+  lifestyle?: {
+      smoking?: string[];
+      drinking?: string[];
+      exercise?: string[];
+  }
 }
 
 // --- Helper Functions ---
@@ -31,6 +37,186 @@ const getDistanceFromLatLonInMi = (lat1: number, lon1: number, lat2: number, lon
 };
 
 // --- Reusable Components ---
+
+const SplashScreen: React.FC<{ onFinished: () => void }> = ({ onFinished }) => {
+    useEffect(() => {
+        const timer = setTimeout(onFinished, 2500); // Show splash for 2.5 seconds
+        return () => clearTimeout(timer);
+    }, [onFinished]);
+
+    return (
+        <div className="fixed inset-0 z-50 bg-gradient-to-br from-pink-500 to-orange-400 flex flex-col items-center justify-center">
+            <div className="animate-pulse-subtle">
+                <GeminiCupidLogo className="w-32 h-32 text-white drop-shadow-lg" />
+            </div>
+            <h1 className="text-4xl font-bold text-white mt-6 tracking-wider drop-shadow-md animate-fade-in-up">Gemini Cupid</h1>
+            <p className="text-white/90 mt-2 text-lg animate-fade-in-up" style={{ animationDelay: '0.3s' }}>Find your cosmic connection</p>
+        </div>
+    );
+};
+
+const AuthScreen: React.FC<{
+    existingUsers: User[];
+    onLogin: (user: User) => void;
+    onSignup: (newUser: User) => void;
+}> = ({ existingUsers, onLogin, onSignup }) => {
+    const [isSignup, setIsSignup] = useState(false);
+    const [loginId, setLoginId] = useState<string>("");
+    
+    // Signup Form State
+    const [newName, setNewName] = useState("");
+    const [newAge, setNewAge] = useState(18);
+    const [newBio, setNewBio] = useState("");
+    const [newInterest, setNewInterest] = useState("");
+    const [newInterests, setNewInterests] = useState<string[]>([]);
+    const [gender, setGender] = useState("female"); // Simple toggle for random avatar generation
+
+    const handleAddInterest = () => {
+        if (newInterest.trim() && !newInterests.includes(newInterest.trim())) {
+            setNewInterests([...newInterests, newInterest.trim()]);
+            setNewInterest("");
+        }
+    };
+
+    const handleSubmitSignup = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newName || !newBio || newInterests.length === 0) return;
+
+        const newUser: User = {
+            id: Date.now(),
+            name: newName,
+            age: newAge,
+            bio: newBio,
+            // Generate a random avatar based on basic selection
+            imageUrl: `https://picsum.photos/seed/${newName}-${Date.now()}/800/1200`, 
+            interests: newInterests,
+            location: "Unknown Location", // In a real app, we'd ask permission here
+            coordinates: { lat: 37.7749, lon: -122.4194 }, // Default to SF for demo
+            viewCount: 0,
+            profileVisibility: 'public',
+            relationshipGoal: 'Figuring it out',
+            lifestyle: { smoking: 'No', drinking: 'Socially', exercise: 'Sometimes' }
+        };
+        onSignup(newUser);
+    };
+
+    const handleLogin = () => {
+        const user = existingUsers.find(u => u.id === parseInt(loginId));
+        if (user) {
+            onLogin(user);
+        }
+    };
+
+    return (
+        <div className="flex flex-col h-full bg-white overflow-y-auto">
+             <div className="h-1/3 bg-gradient-to-br from-pink-500 to-orange-400 flex flex-col items-center justify-center rounded-b-[3rem] shadow-lg mb-6 shrink-0">
+                <GeminiCupidLogo className="w-20 h-20 text-white mb-2" />
+                <h1 className="text-3xl font-bold text-white">Gemini Cupid</h1>
+                <p className="text-white/80">Sign in to find your match</p>
+            </div>
+
+            <div className="px-8 pb-8 flex-1">
+                <div className="flex border-b mb-6">
+                    <button 
+                        className={`flex-1 pb-2 font-bold ${!isSignup ? 'text-pink-500 border-b-2 border-pink-500' : 'text-gray-400'}`}
+                        onClick={() => setIsSignup(false)}
+                    >
+                        Log In
+                    </button>
+                    <button 
+                        className={`flex-1 pb-2 font-bold ${isSignup ? 'text-pink-500 border-b-2 border-pink-500' : 'text-gray-400'}`}
+                        onClick={() => setIsSignup(true)}
+                    >
+                        Sign Up
+                    </button>
+                </div>
+
+                {!isSignup ? (
+                    <div className="space-y-6 animate-fade-in-up">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Select User (Demo Mode)</label>
+                            <select 
+                                className="w-full p-3 border rounded-xl bg-gray-50 focus:ring-pink-500 focus:border-pink-500"
+                                value={loginId}
+                                onChange={(e) => setLoginId(e.target.value)}
+                            >
+                                <option value="">-- Choose a profile --</option>
+                                {existingUsers.map(u => (
+                                    <option key={u.id} value={u.id}>{u.name} ({u.age})</option>
+                                ))}
+                            </select>
+                        </div>
+                        <button 
+                            onClick={handleLogin}
+                            disabled={!loginId}
+                            className="w-full bg-pink-500 text-white py-3 rounded-xl font-bold shadow-lg hover:bg-pink-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Start Swiping
+                        </button>
+                    </div>
+                ) : (
+                    <form onSubmit={handleSubmitSignup} className="space-y-4 animate-fade-in-up">
+                         <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Name</label>
+                            <input 
+                                type="text" required value={newName} onChange={e => setNewName(e.target.value)}
+                                className="w-full p-3 border rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                                placeholder="Your Name"
+                            />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Age</label>
+                                <input 
+                                    type="number" required min="18" max="99" value={newAge} onChange={e => setNewAge(parseInt(e.target.value))}
+                                    className="w-full p-3 border rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                                />
+                            </div>
+                             <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Avatar Style</label>
+                                <select value={gender} onChange={(e) => setGender(e.target.value)} className="w-full p-3 border rounded-xl bg-gray-50">
+                                    <option value="female">Style A</option>
+                                    <option value="male">Style B</option>
+                                </select>
+                            </div>
+                        </div>
+                         <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Bio</label>
+                            <textarea 
+                                required value={newBio} onChange={e => setNewBio(e.target.value)} rows={3}
+                                className="w-full p-3 border rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                                placeholder="Tell us about yourself..."
+                            />
+                        </div>
+                         <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Interests</label>
+                            <div className="flex gap-2 mb-2">
+                                <input 
+                                    type="text" value={newInterest} onChange={e => setNewInterest(e.target.value)}
+                                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleAddInterest())}
+                                    className="flex-1 p-3 border rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                                    placeholder="Add interest"
+                                />
+                                <button type="button" onClick={handleAddInterest} className="bg-pink-100 text-pink-600 px-4 rounded-xl font-bold">+</button>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                {newInterests.map(i => (
+                                    <span key={i} className="bg-pink-50 text-pink-600 px-2 py-1 rounded-lg text-sm border border-pink-100">{i}</span>
+                                ))}
+                            </div>
+                        </div>
+                        <button 
+                            type="submit"
+                            className="w-full bg-gradient-to-r from-pink-500 to-orange-400 text-white py-3 rounded-xl font-bold shadow-lg hover:scale-[1.02] transition-transform mt-4"
+                        >
+                            Create Account
+                        </button>
+                    </form>
+                )}
+            </div>
+        </div>
+    );
+};
 
 const SwipeableProfileCard: React.FC<{
   user: User;
@@ -206,6 +392,45 @@ const ProfileDetailScreen: React.FC<{ user: User; onClose: () => void }> = ({ us
                         <h3 className="text-xl font-bold text-gray-800 mb-2">About</h3>
                         <p className="text-gray-700 text-base leading-relaxed">{user.bio}</p>
                     </div>
+                    
+                    {user.relationshipGoal && (
+                        <div className="mt-6 border-t pt-6">
+                            <h3 className="text-xl font-bold text-gray-800 mb-3">Looking For</h3>
+                            <div className="flex items-center gap-2 bg-purple-50 text-purple-700 px-4 py-2 rounded-lg w-fit">
+                                <GoalIcon className="w-5 h-5" />
+                                <span className="font-medium">{user.relationshipGoal}</span>
+                            </div>
+                        </div>
+                    )}
+                    
+                    {user.lifestyle && (
+                        <div className="mt-6 border-t pt-6">
+                            <h3 className="text-xl font-bold text-gray-800 mb-3">Lifestyle</h3>
+                            <div className="grid grid-cols-3 gap-3">
+                                {user.lifestyle.smoking && (
+                                    <div className="flex flex-col items-center justify-center bg-gray-50 p-3 rounded-xl">
+                                        <SmokingIcon className="w-6 h-6 text-gray-500 mb-1" />
+                                        <span className="text-xs text-gray-600">Smoking</span>
+                                        <span className="text-sm font-semibold text-gray-800">{user.lifestyle.smoking}</span>
+                                    </div>
+                                )}
+                                {user.lifestyle.drinking && (
+                                    <div className="flex flex-col items-center justify-center bg-gray-50 p-3 rounded-xl">
+                                        <DrinkingIcon className="w-6 h-6 text-gray-500 mb-1" />
+                                        <span className="text-xs text-gray-600">Drinking</span>
+                                        <span className="text-sm font-semibold text-gray-800">{user.lifestyle.drinking}</span>
+                                    </div>
+                                )}
+                                {user.lifestyle.exercise && (
+                                    <div className="flex flex-col items-center justify-center bg-gray-50 p-3 rounded-xl">
+                                        <ExerciseIcon className="w-6 h-6 text-gray-500 mb-1" />
+                                        <span className="text-xs text-gray-600">Exercise</span>
+                                        <span className="text-sm font-semibold text-gray-800">{user.lifestyle.exercise}</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
 
                      <div className="mt-6 border-t pt-6">
                         <h3 className="text-xl font-bold text-gray-800 mb-3">Interests</h3>
@@ -363,7 +588,8 @@ const MatchesScreen: React.FC<{ matches: Match[], onSelectChat: (user: User) => 
             ) : (
                 <div className="space-y-4">
                     {matches.map(match => {
-                        const otherUser = match.users.find(u => u.id !== currentUser.id)!;
+                        const otherUser = match.users.find(u => u.id !== currentUser.id);
+                        if (!otherUser) return null; // Should not happen
                         return (
                             <div key={match.id} onClick={() => onSelectChat(otherUser)} className="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors relative overflow-hidden">
                                 {match.isSuperLike && (
@@ -528,6 +754,9 @@ const ChatScreen: React.FC<{
     const [isLoadingReplies, setIsLoadingReplies] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const [isVideoCallActive, setIsVideoCallActive] = useState(false);
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+
 
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
@@ -623,44 +852,92 @@ const ChatScreen: React.FC<{
         setIsEmojiPanelOpen(prev => !prev);
     };
 
+    // Filter messages based on search query
+    const filteredMessages = searchQuery 
+        ? messages.filter(msg => msg.type === 'text' && msg.content.toLowerCase().includes(searchQuery.toLowerCase())) 
+        : messages;
+
+
+    // Highlighter function
+    const highlightText = (text: string, highlight: string) => {
+        if (!highlight.trim()) {
+            return text;
+        }
+        const regex = new RegExp(`(${highlight})`, 'gi');
+        const parts = text.split(regex);
+        return parts.map((part, i) => 
+            regex.test(part) ? <span key={i} className="bg-yellow-200 text-black font-medium">{part}</span> : part
+        );
+    };
+
     return (
         <div className="flex flex-col h-full bg-white relative">
             {isVideoCallActive && <VideoCallScreen user={user} onEndCall={() => setIsVideoCallActive(false)} />}
             <header className="flex items-center p-4 border-b sticky top-0 bg-white z-10">
                 <button title="Back" onClick={onBack} className="text-gray-600 mr-4 text-2xl" aria-label="Back to matches">&larr;</button>
-                <img src={user.imageUrl} alt={user.name} className="w-10 h-10 rounded-full object-cover mr-3" />
-                <h2 className="font-bold text-lg text-gray-800 flex-1">{user.name}</h2>
-                <button title="Video Call" onClick={() => setIsVideoCallActive(true)} className="text-gray-500 hover:text-pink-500 p-2">
-                    <VideoCameraIcon className="w-6 h-6"/>
-                </button>
+                
+                {isSearchOpen ? (
+                    <div className="flex-1 flex items-center gap-2 animate-fade-in-up">
+                        <input 
+                            type="text" 
+                            value={searchQuery} 
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Search chat..." 
+                            className="flex-1 bg-gray-100 rounded-full px-4 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500"
+                            autoFocus
+                        />
+                         <button onClick={() => { setIsSearchOpen(false); setSearchQuery(''); }} className="text-gray-500 text-sm">Cancel</button>
+                    </div>
+                ) : (
+                    <>
+                        <img src={user.imageUrl} alt={user.name} className="w-10 h-10 rounded-full object-cover mr-3" />
+                        <h2 className="font-bold text-lg text-gray-800 flex-1">{user.name}</h2>
+                        <button title="Search Chat" onClick={() => setIsSearchOpen(true)} className="text-gray-500 hover:text-pink-500 p-2 mr-1">
+                            <MagnifyingGlassIcon className="w-6 h-6"/>
+                        </button>
+                        <button title="Video Call" onClick={() => setIsVideoCallActive(true)} className="text-gray-500 hover:text-pink-500 p-2">
+                            <VideoCameraIcon className="w-6 h-6"/>
+                        </button>
+                    </>
+                )}
             </header>
 
             <div className="flex-1 p-4 overflow-y-auto bg-gray-100 space-y-4">
-                {messages.map((msg) => {
+                {filteredMessages.map((msg, index) => {
                     const isCurrentUser = msg.senderId === currentUser.id;
+                    const isLastMessage = index === messages.length - 1;
+                    const isRead = msg.read && isCurrentUser && isLastMessage; // Simple read logic for demo
+
                     if (msg.type === 'sticker') {
                         return (
-                            <div key={msg.id} className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
-                                <span className="text-6xl">{msg.content}</span>
+                            <div key={msg.id} className={`flex flex-col ${isCurrentUser ? 'items-end' : 'items-start'}`}>
+                                <div className="text-6xl">{msg.content}</div>
+                                {isRead && <div className="flex items-center text-xs text-pink-500 mt-1"><CheckBadgeIcon className="w-3 h-3 mr-1"/> Read</div>}
                             </div>
                         );
                     }
                     if (msg.type === 'voice') {
                          return (
-                            <div key={msg.id} className={`flex items-end gap-2 ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
-                                 {!isCurrentUser && <img src={user.imageUrl} className="w-6 h-6 rounded-full" />}
-                                 <AudioPlayer base64Content={msg.content} isCurrentUser={isCurrentUser} />
-                                {isCurrentUser && <img src={currentUser.imageUrl} className="w-6 h-6 rounded-full" />}
+                            <div key={msg.id} className={`flex flex-col ${isCurrentUser ? 'items-end' : 'items-start'}`}>
+                                <div className={`flex items-end gap-2 ${isCurrentUser ? 'flex-row-reverse' : 'flex-row'}`}>
+                                    {!isCurrentUser && <img src={user.imageUrl} className="w-6 h-6 rounded-full" />}
+                                    <AudioPlayer base64Content={msg.content} isCurrentUser={isCurrentUser} />
+                                    {isCurrentUser && <img src={currentUser.imageUrl} className="w-6 h-6 rounded-full" />}
+                                </div>
+                                {isRead && <div className="flex items-center text-xs text-pink-500 mt-1 mr-8"><CheckBadgeIcon className="w-3 h-3 mr-1"/> Read</div>}
                             </div>
                         )
                     }
                     return (
-                         <div key={msg.id} className={`flex items-end gap-2 ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
-                            {!isCurrentUser && <img src={user.imageUrl} className="w-6 h-6 rounded-full" />}
-                            <div className={`max-w-xs md:max-w-md px-4 py-2 rounded-2xl ${isCurrentUser ? 'bg-pink-500 text-white rounded-br-none' : 'bg-gray-200 text-gray-800 rounded-bl-none'}`}>
-                                <p>{msg.content}</p>
+                         <div key={msg.id} className={`flex flex-col ${isCurrentUser ? 'items-end' : 'items-start'}`}>
+                            <div className={`flex items-end gap-2 ${isCurrentUser ? 'flex-row-reverse' : 'flex-row'}`}>
+                                {!isCurrentUser && <img src={user.imageUrl} className="w-6 h-6 rounded-full" />}
+                                <div className={`max-w-xs md:max-w-md px-4 py-2 rounded-2xl ${isCurrentUser ? 'bg-pink-500 text-white rounded-br-none' : 'bg-gray-200 text-gray-800 rounded-bl-none'}`}>
+                                    <p>{highlightText(msg.content, searchQuery)}</p>
+                                </div>
+                                {isCurrentUser && <img src={currentUser.imageUrl} className="w-6 h-6 rounded-full" />}
                             </div>
-                             {isCurrentUser && <img src={currentUser.imageUrl} className="w-6 h-6 rounded-full" />}
+                            {isRead && <div className="flex items-center text-xs text-pink-500 mt-1 mr-8"><CheckBadgeIcon className="w-3 h-3 mr-1"/> Read</div>}
                         </div>
                     );
                 })}
@@ -759,21 +1036,35 @@ const ChatScreen: React.FC<{
 
 const ProfileEditScreen: React.FC<{
     user: User;
+    allUsers: User[];
+    onSwitchUser: (userId: number) => void;
+    onForceMatch: (userId: number) => void;
     onSave: (updatedUser: User) => void;
     onBack: () => void;
     blockedUsers: User[];
     onUnblock: (userId: number) => void;
-}> = ({ user, onSave, onBack, blockedUsers, onUnblock }) => {
+    onLogout: () => void;
+}> = ({ user, allUsers, onSwitchUser, onForceMatch, onSave, onBack, blockedUsers, onUnblock, onLogout }) => {
     const [formData, setFormData] = useState<User>(user);
     const [newInterest, setNewInterest] = useState('');
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: name === 'age' ? parseInt(value) || 0 : value }));
     };
     
     const handleVisibilityChange = (visibility: 'public' | 'private') => {
         setFormData(prev => ({ ...prev, profileVisibility: visibility }));
+    };
+
+    const handleLifestyleChange = (type: keyof Lifestyle, value: string) => {
+        setFormData(prev => ({
+            ...prev,
+            lifestyle: {
+                ...prev.lifestyle,
+                [type]: value
+            }
+        }));
     };
 
     const handleAddInterest = () => {
@@ -804,6 +1095,7 @@ const ProfileEditScreen: React.FC<{
             <header className="flex items-center p-4 border-b sticky top-0 bg-white z-10">
                 <button title="Back" onClick={onBack} className="text-gray-600 mr-4 text-2xl" aria-label="Go back">&larr;</button>
                 <h2 className="font-bold text-xl text-gray-800">Edit Profile</h2>
+                <button onClick={onLogout} className="ml-auto text-sm text-red-500 font-semibold">Log Out</button>
             </header>
             <form onSubmit={handleSubmit} className="p-6 space-y-6 flex-1 overflow-y-auto">
                 <div className="flex flex-col items-center">
@@ -824,6 +1116,44 @@ const ProfileEditScreen: React.FC<{
                     <label htmlFor="bio" className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
                     <textarea name="bio" id="bio" value={formData.bio} onChange={handleChange} rows={4} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-pink-500 focus:border-pink-500" required />
                 </div>
+
+                <div>
+                    <label htmlFor="relationshipGoal" className="block text-sm font-medium text-gray-700 mb-1">Relationship Goal</label>
+                    <select name="relationshipGoal" id="relationshipGoal" value={formData.relationshipGoal || ''} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-pink-500 focus:border-pink-500">
+                        <option value="">Select a goal</option>
+                        {RELATIONSHIP_GOALS.map(goal => (
+                            <option key={goal} value={goal}>{goal}</option>
+                        ))}
+                    </select>
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Lifestyle</label>
+                    <div className="grid grid-cols-3 gap-2">
+                        <div>
+                            <label className="text-xs text-gray-500">Smoking</label>
+                            <select value={formData.lifestyle?.smoking || ''} onChange={(e) => handleLifestyleChange('smoking', e.target.value)} className="w-full text-sm border rounded-md p-1">
+                                <option value="">-</option>
+                                {LIFESTYLE_OPTIONS.smoking.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="text-xs text-gray-500">Drinking</label>
+                             <select value={formData.lifestyle?.drinking || ''} onChange={(e) => handleLifestyleChange('drinking', e.target.value)} className="w-full text-sm border rounded-md p-1">
+                                <option value="">-</option>
+                                {LIFESTYLE_OPTIONS.drinking.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="text-xs text-gray-500">Exercise</label>
+                             <select value={formData.lifestyle?.exercise || ''} onChange={(e) => handleLifestyleChange('exercise', e.target.value)} className="w-full text-sm border rounded-md p-1">
+                                <option value="">-</option>
+                                {LIFESTYLE_OPTIONS.exercise.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
 
                 <div>
                     <label htmlFor="add-interest" className="block text-sm font-medium text-gray-700 mb-1">Interests</label>
@@ -880,6 +1210,51 @@ const ProfileEditScreen: React.FC<{
                         <p className="text-sm text-gray-500 text-center py-4">You haven't blocked anyone.</p>
                     )}
                 </div>
+
+                {/* Developer Mode: User Switcher */}
+                <div className="mt-8 border-t-2 border-gray-200 pt-6 bg-gray-50 rounded-xl p-4">
+                    <h3 className="text-lg font-bold text-gray-800 mb-2 flex items-center gap-2">
+                        <BoltIcon className="w-5 h-5 text-yellow-500" />
+                        Developer Tools
+                    </h3>
+                    <p className="text-xs text-gray-500 mb-4">Use these tools to simulate a conversation by switching between accounts.</p>
+                    
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Switch Account</label>
+                    <div className="grid grid-cols-2 gap-2 mb-4">
+                         {allUsers.map(u => (
+                             <button
+                                key={u.id}
+                                type="button"
+                                onClick={() => onSwitchUser(u.id)}
+                                className={`px-3 py-2 rounded-lg text-sm text-left flex items-center gap-2 transition-colors ${u.id === user.id ? 'bg-pink-100 ring-2 ring-pink-500' : 'bg-white hover:bg-gray-100 border'}`}
+                             >
+                                 <img src={u.imageUrl} className="w-6 h-6 rounded-full object-cover" alt="" />
+                                 <span className={`truncate ${u.id === user.id ? 'font-bold text-pink-800' : 'text-gray-700'}`}>
+                                     {u.name} {u.id === user.id && '(You)'}
+                                 </span>
+                             </button>
+                         ))}
+                    </div>
+
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Force Match</label>
+                    <div className="grid grid-cols-1 gap-2">
+                         {allUsers.filter(u => u.id !== user.id).map(u => (
+                             <button
+                                key={u.id}
+                                type="button"
+                                onClick={() => onForceMatch(u.id)}
+                                className="px-3 py-2 bg-white border rounded-lg text-sm text-gray-700 hover:bg-gray-50 flex items-center justify-between"
+                             >
+                                 <div className="flex items-center gap-2">
+                                    <img src={u.imageUrl} className="w-6 h-6 rounded-full object-cover" alt="" />
+                                    Match with {u.name}
+                                 </div>
+                                 <HeartIcon className="w-4 h-4 text-pink-500" />
+                             </button>
+                         ))}
+                    </div>
+                </div>
+
 
                 <div className="pt-4 sticky bottom-0 bg-white pb-6">
                     <button type="submit" className="w-full bg-gradient-to-r from-pink-500 to-orange-400 text-white font-bold py-3 rounded-full shadow-lg hover:scale-105 transition-transform">
@@ -940,6 +1315,30 @@ const FilterScreen: React.FC<{
       const resetFilters = { ageRange: { min: 18, max: 99 }, interests: [], maxDistance: 100 };
       setTempFilters(resetFilters);
     }
+    
+    const handleGoalChange = (goal: string) => {
+        setTempFilters(prev => ({
+            ...prev,
+            relationshipGoal: goal === prev.relationshipGoal ? undefined : goal
+        }));
+    };
+    
+    const handleLifestyleToggle = (category: keyof Lifestyle, value: string) => {
+        setTempFilters(prev => {
+            const currentValues = prev.lifestyle?.[category] || [];
+            const newValues = currentValues.includes(value)
+                ? currentValues.filter(v => v !== value)
+                : [...currentValues, value];
+            
+            return {
+                ...prev,
+                lifestyle: {
+                    ...prev.lifestyle,
+                    [category]: newValues.length > 0 ? newValues : undefined
+                }
+            };
+        });
+    };
 
     return (
         <div className="flex flex-col h-full bg-white">
@@ -967,6 +1366,50 @@ const FilterScreen: React.FC<{
                     <div className="mt-2 relative h-5 flex items-center">
                          <input type="range" name="min" value={tempFilters.ageRange.min} onChange={handleAgeChange} min="18" max="99" className="absolute w-full accent-pink-500" style={{ zIndex: tempFilters.ageRange.min > 58 ? 1 : 0 }}/>
                         <input type="range" name="max" value={tempFilters.ageRange.max} onChange={handleAgeChange} min="18" max="99" className="absolute w-full accent-pink-500" />
+                    </div>
+                </div>
+
+                 <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Relationship Goal</label>
+                    <div className="flex flex-wrap gap-2">
+                        {RELATIONSHIP_GOALS.map(goal => (
+                            <button 
+                                key={goal}
+                                onClick={() => handleGoalChange(goal)}
+                                className={`text-sm border px-3 py-1 rounded-full transition-colors ${tempFilters.relationshipGoal === goal ? 'bg-purple-100 border-purple-500 text-purple-700' : 'bg-white border-gray-300 text-gray-700'}`}
+                            >
+                                {goal}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                 <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Lifestyle</label>
+                    
+                    <div className="mb-2">
+                        <span className="text-xs text-gray-500 block mb-1">Smoking</span>
+                        <div className="flex flex-wrap gap-2">
+                            {LIFESTYLE_OPTIONS.smoking.map(opt => (
+                                <button key={opt} onClick={() => handleLifestyleToggle('smoking', opt)} className={`text-xs border px-2 py-1 rounded-lg ${tempFilters.lifestyle?.smoking?.includes(opt) ? 'bg-gray-200 border-gray-400 font-semibold' : 'bg-white'}`}>{opt}</button>
+                            ))}
+                        </div>
+                    </div>
+                     <div className="mb-2">
+                        <span className="text-xs text-gray-500 block mb-1">Drinking</span>
+                        <div className="flex flex-wrap gap-2">
+                            {LIFESTYLE_OPTIONS.drinking.map(opt => (
+                                <button key={opt} onClick={() => handleLifestyleToggle('drinking', opt)} className={`text-xs border px-2 py-1 rounded-lg ${tempFilters.lifestyle?.drinking?.includes(opt) ? 'bg-gray-200 border-gray-400 font-semibold' : 'bg-white'}`}>{opt}</button>
+                            ))}
+                        </div>
+                    </div>
+                     <div>
+                        <span className="text-xs text-gray-500 block mb-1">Exercise</span>
+                        <div className="flex flex-wrap gap-2">
+                            {LIFESTYLE_OPTIONS.exercise.map(opt => (
+                                <button key={opt} onClick={() => handleLifestyleToggle('exercise', opt)} className={`text-xs border px-2 py-1 rounded-lg ${tempFilters.lifestyle?.exercise?.includes(opt) ? 'bg-gray-200 border-gray-400 font-semibold' : 'bg-white'}`}>{opt}</button>
+                            ))}
+                        </div>
                     </div>
                 </div>
 
@@ -1009,14 +1452,21 @@ const FilterScreen: React.FC<{
 // --- Main App Component ---
 
 export default function App() {
-    const [users, setUsers] = useState<User[]>(initialUsers);
+    const [showSplash, setShowSplash] = useState(true);
+    const [users, setUsers] = useState<User[]>([]);
+    // Initialize currentUserId from localStorage if available, else null
+    const [currentUserId, setCurrentUserId] = useState<number | null>(() => {
+        const savedId = localStorage.getItem('gemini-cupid-current-user-id');
+        return savedId ? parseInt(savedId) : null;
+    });
+    
     const [currentIndex, setCurrentIndex] = useState(0);
     const [likedIds, setLikedIds] = useState<Set<number>>(new Set());
     const [superLikedIds, setSuperLikedIds] = useState<Set<number>>(new Set());
     const [blockedUserIds, setBlockedUserIds] = useState<Set<number>>(new Set());
     const [matches, setMatches] = useState<Match[]>([]);
     const [newMatch, setNewMatch] = useState<{ user: User, isSuperLike: boolean } | null>(null);
-    const [activeView, setActiveView] = useState('swipe');
+    const [activeView, setActiveView] = useState('swipe'); // 'swipe', 'profile', 'matches', 'chat', 'auth', 'requests', 'filters'
     const [activeChatUser, setActiveChatUser] = useState<User | null>(null);
     const [detailedProfileUser, setDetailedProfileUser] = useState<User | null>(null);
     const [action, setAction] = useState<'like' | 'pass' | 'superlike' | null>(null);
@@ -1030,20 +1480,43 @@ export default function App() {
     const [friendRequests, setFriendRequests] = useState<Set<number>>(new Set([4, 7]));
     const [currentUserCoords, setCurrentUserCoords] = useState<{ lat: number; lon: number } | null>(null);
 
-
+    // Load Users from LocalStorage or Seed
     useEffect(() => {
-        // Load user profile
-        const savedUserJSON = localStorage.getItem(`gemini-cupid-user-${CURRENT_USER_ID}`);
-        if (savedUserJSON) {
+        const savedUsersJSON = localStorage.getItem('gemini-cupid-users');
+        if (savedUsersJSON) {
             try {
-                const savedUser = JSON.parse(savedUserJSON);
-                setUsers(prevUsers => prevUsers.map(u => u.id === CURRENT_USER_ID ? { ...u, ...savedUser } : u));
-            } catch (error) {
-                console.error("Failed to parse user data from localStorage", error);
+                const savedUsers = JSON.parse(savedUsersJSON);
+                setUsers(savedUsers);
+            } catch (e) {
+                console.error("Failed to load users", e);
+                setUsers(INITIAL_USERS);
             }
+        } else {
+            setUsers(INITIAL_USERS);
         }
-        
-        // Load blocked users
+    }, []);
+
+    // Save Users to LocalStorage whenever they change
+    useEffect(() => {
+        if (users.length > 0) {
+            localStorage.setItem('gemini-cupid-users', JSON.stringify(users));
+        }
+    }, [users]);
+
+    // Handle Login/Logout persistence
+    useEffect(() => {
+        if (currentUserId) {
+            localStorage.setItem('gemini-cupid-current-user-id', currentUserId.toString());
+            // Make sure we aren't in auth view if logged in
+            if (activeView === 'auth') setActiveView('swipe');
+        } else {
+            localStorage.removeItem('gemini-cupid-current-user-id');
+            setActiveView('auth');
+        }
+    }, [currentUserId, activeView]);
+
+    // Load blocked users
+    useEffect(() => {
         const savedBlockedIdsJSON = localStorage.getItem('gemini-cupid-blocked-ids');
         if (savedBlockedIdsJSON) {
             try {
@@ -1066,11 +1539,8 @@ export default function App() {
                 });
             },
             (error) => {
-                console.error("Geolocation error:", error);
-                const user = users.find(u => u.id === CURRENT_USER_ID);
-                if (user) {
-                    setCurrentUserCoords(user.coordinates);
-                }
+                console.warn("Geolocation access denied or error:", error.message);
+                // Fallback logic handled in profilesWithDistance
             }
         );
     }, []);
@@ -1079,25 +1549,47 @@ export default function App() {
         setBlockedUserIds(newBlockedIds);
         localStorage.setItem('gemini-cupid-blocked-ids', JSON.stringify(Array.from(newBlockedIds)));
     };
+    
+    const handleSignup = (newUser: User) => {
+        setUsers(prev => [...prev, newUser]);
+        setCurrentUserId(newUser.id);
+        setActiveView('swipe');
+    };
 
-    const currentUser = useMemo(() => users.find(u => u.id === CURRENT_USER_ID)!, [users]);
+    const handleLogin = (user: User) => {
+        setCurrentUserId(user.id);
+        setActiveView('swipe');
+    }
+
+    const handleLogout = () => {
+        setCurrentUserId(null);
+        setActiveView('auth');
+        setCurrentIndex(0);
+        setMatches([]);
+        setMessages({});
+    }
+
+    const currentUser = useMemo(() => users.find(u => u.id === currentUserId), [users, currentUserId]);
     
     const profilesWithDistance = useMemo(() => {
-        if (!currentUserCoords) return [];
+        if (!currentUser) return [];
         
+        // Fallback if current user coords missing (GPS denied/error)
+        const myCoords = currentUserCoords || currentUser.coordinates;
+
         return users
-            .filter(u => u.id !== CURRENT_USER_ID)
+            .filter(u => u.id !== currentUserId)
             .map(user => ({
                 ...user,
                 distance: getDistanceFromLatLonInMi(
-                    currentUserCoords.lat,
-                    currentUserCoords.lon,
+                    myCoords.lat,
+                    myCoords.lon,
                     user.coordinates.lat,
                     user.coordinates.lon
                 ),
             }))
             .sort((a, b) => a.distance - b.distance);
-    }, [users, currentUserCoords]);
+    }, [users, currentUserCoords, currentUserId, currentUser]);
 
     const filteredProfiles = useMemo(() => {
         return profilesWithDistance
@@ -1106,19 +1598,26 @@ export default function App() {
                 const isAgeMatch = user.age >= filters.ageRange.min && user.age <= filters.ageRange.max;
                 const isInterestMatch = filters.interests.length === 0 || filters.interests.some(interest => user.interests.includes(interest));
                 const isDistanceMatch = user.distance !== undefined && user.distance <= filters.maxDistance;
-                return isAgeMatch && isInterestMatch && isDistanceMatch;
+                
+                const isGoalMatch = !filters.relationshipGoal || user.relationshipGoal === filters.relationshipGoal;
+                
+                // Lifestyle filters
+                const isSmokingMatch = !filters.lifestyle?.smoking || (user.lifestyle?.smoking && filters.lifestyle.smoking.includes(user.lifestyle.smoking));
+                const isDrinkingMatch = !filters.lifestyle?.drinking || (user.lifestyle?.drinking && filters.lifestyle.drinking.includes(user.lifestyle.drinking));
+                const isExerciseMatch = !filters.lifestyle?.exercise || (user.lifestyle?.exercise && filters.lifestyle.exercise.includes(user.lifestyle.exercise));
+
+                return isAgeMatch && isInterestMatch && isDistanceMatch && isGoalMatch && isSmokingMatch && isDrinkingMatch && isExerciseMatch;
             });
     }, [profilesWithDistance, filters, blockedUserIds]);
     
     const allInterests = useMemo(() => {
         const interestsSet = new Set<string>();
-        initialUsers.forEach(user => {
-            if (user.id !== CURRENT_USER_ID) {
-                user.interests.forEach(interest => interestsSet.add(interest));
-            }
+        users.forEach(user => {
+            // Just collect all interests globally for the filter list
+            user.interests.forEach(interest => interestsSet.add(interest));
         });
         return Array.from(interestsSet).sort();
-    }, []);
+    }, [users]); // Update when users change (e.g. new signup)
 
     const topProfileId = useMemo(() => {
         return currentIndex < filteredProfiles.length ? filteredProfiles[currentIndex].id : null;
@@ -1127,6 +1626,7 @@ export default function App() {
     useEffect(() => {
         if (topProfileId !== null) {
             const timer = setTimeout(() => {
+                // Update view count in local state and persist
                 setUsers(prevUsers =>
                     prevUsers.map(u =>
                         u.id === topProfileId
@@ -1134,13 +1634,13 @@ export default function App() {
                             : u
                     )
                 );
-            }, 500); // Increment after a short delay to feel more natural
+            }, 500); 
             return () => clearTimeout(timer);
         }
     }, [topProfileId]);
 
     const handleCardSwiped = (direction: 'right' | 'left') => {
-        if (currentIndex >= filteredProfiles.length) return;
+        if (currentIndex >= filteredProfiles.length || !currentUser) return;
 
         if (undoTimeoutRef.current) {
             clearTimeout(undoTimeoutRef.current);
@@ -1192,7 +1692,7 @@ export default function App() {
     };
 
     const handleUndo = () => {
-        if (!lastAction) return;
+        if (!lastAction || !currentUser) return;
 
         if (undoTimeoutRef.current) {
             clearTimeout(undoTimeoutRef.current);
@@ -1233,6 +1733,7 @@ export default function App() {
     };
     
     const handleAcceptRequest = (userId: number) => {
+        if (!currentUser) return;
         const likedUser = users.find(u => u.id === userId);
         if (!likedUser) return;
         
@@ -1272,18 +1773,26 @@ export default function App() {
 
     const handleSendMessage = (chatId: string, type: 'text' | 'sticker' | 'voice', content: string) => {
         if (content.trim() === '' && type === 'text') return;
+        if (!currentUserId) return;
 
         const newMessage: Message = {
             id: `${Date.now()}-${Math.random()}`,
-            senderId: CURRENT_USER_ID,
+            senderId: currentUserId,
             timestamp: new Date(),
             type,
             content,
+            read: false
         };
-
+        
+        // Mark previous messages from the other person as read when I send a message (simulated read logic)
         setMessages(prev => {
             const existingMessages = prev[chatId] || [];
-            return { ...prev, [chatId]: [...existingMessages, newMessage] };
+            // For demo: assume if I am sending a message, I have read theirs.
+            const updatedMessages = existingMessages.map(m => 
+                m.senderId !== currentUserId ? { ...m, read: true } : m
+            );
+
+            return { ...prev, [chatId]: [...updatedMessages, newMessage] };
         });
     };
 
@@ -1292,13 +1801,34 @@ export default function App() {
              setActiveChatUser(newMatch.user);
              setActiveView('chat');
              setNewMatch(null);
+             
+             // Mark messages as read when opening
+             if (currentUser) {
+                const chatId = [currentUser.id, newMatch.user.id].sort().join('-');
+                markChatAsRead(chatId, newMatch.user.id);
+             }
         }
     }
     
     const handleSelectChat = (user: User) => {
         setActiveChatUser(user);
         setActiveView('chat');
+        
+        if (currentUser) {
+            const chatId = [currentUser.id, user.id].sort().join('-');
+            markChatAsRead(chatId, user.id);
+        }
     }
+
+    const markChatAsRead = (chatId: string, otherUserId: number) => {
+        setMessages(prev => {
+            const chatMessages = prev[chatId] || [];
+            const updatedMessages = chatMessages.map(m => 
+                m.senderId === otherUserId ? { ...m, read: true } : m
+            );
+            return { ...prev, [chatId]: updatedMessages };
+        });
+    };
     
     const handleBackToMatches = () => {
         setActiveChatUser(null);
@@ -1307,7 +1837,7 @@ export default function App() {
     
     const handleSaveProfile = (updatedUser: User) => {
         setUsers(prevUsers => prevUsers.map(u => u.id === updatedUser.id ? updatedUser : u));
-        localStorage.setItem(`gemini-cupid-user-${CURRENT_USER_ID}`, JSON.stringify(updatedUser));
+        // No need to manually save to LS here as the useEffect[users] handles it
         setActiveView('swipe');
     };
     
@@ -1333,10 +1863,49 @@ export default function App() {
         newBlockedIds.delete(userIdToUnblock);
         updateBlockedIds(newBlockedIds);
     };
+    
+    const handleSwitchUser = (userId: number) => {
+        setCurrentUserId(userId);
+        setActiveView('swipe');
+        setNewMatch(null);
+        setActiveChatUser(null);
+        setMessages({}); // Reset local chat view for demo
+    };
+    
+    const handleForceMatch = (targetUserId: number) => {
+        const targetUser = users.find(u => u.id === targetUserId);
+        if (!targetUser || !currentUser) return;
+        
+        const matchId = [currentUserId!, targetUserId].sort().join('-');
+        
+        if (!matches.some(m => m.id === matchId)) {
+            setMatches(prev => [...prev, {
+                id: matchId,
+                users: [currentUser, targetUser],
+                timestamp: new Date(),
+                isSuperLike: false
+            }]);
+            setNewMatch({ user: targetUser, isSuperLike: false });
+        } else {
+            alert(`You are already matched with ${targetUser.name}`);
+        }
+    };
 
     const handleBackToSwipe = () => {
         setActiveView('swipe');
     };
+
+    const handleSplashFinished = () => {
+        setShowSplash(false);
+    };
+
+    if (showSplash) {
+        return <SplashScreen onFinished={handleSplashFinished} />;
+    }
+
+    if (!currentUserId || !currentUser || activeView === 'auth') {
+        return <AuthScreen existingUsers={users} onLogin={handleLogin} onSignup={handleSignup} />;
+    }
 
     const renderView = () => {
         const blockedUsers = users.filter(u => blockedUserIds.has(u.id));
@@ -1357,7 +1926,17 @@ export default function App() {
         }
         
         if (activeView === 'profile') {
-            return <ProfileEditScreen user={currentUser} onSave={handleSaveProfile} onBack={handleBackToSwipe} blockedUsers={blockedUsers} onUnblock={handleUnblockUser} />;
+            return <ProfileEditScreen 
+                user={currentUser} 
+                allUsers={users}
+                onSwitchUser={handleSwitchUser}
+                onForceMatch={handleForceMatch}
+                onSave={handleSaveProfile} 
+                onBack={handleBackToSwipe} 
+                blockedUsers={blockedUsers} 
+                onUnblock={handleUnblockUser}
+                onLogout={handleLogout}
+            />;
         }
 
         if (activeView === 'filters') {
@@ -1426,7 +2005,7 @@ export default function App() {
 
     return (
         <div className="h-screen w-screen max-w-md mx-auto flex flex-col font-sans bg-gray-100 antialiased relative">
-            {newMatch && (
+            {newMatch && currentUser && (
                 <MatchNotification
                     currentUser={currentUser}
                     matchedUser={newMatch.user}

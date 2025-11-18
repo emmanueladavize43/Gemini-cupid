@@ -1,12 +1,10 @@
 import { User } from './types';
 
-// Let's create a more realistic scenario where we are user with ID 1
-export const CURRENT_USER_ID = 1;
-
-export const USERS: User[] = [
+// We remove the hardcoded CURRENT_USER_ID as it will be determined by Auth
+export const INITIAL_USERS: User[] = [
   {
     id: 1,
-    name: 'You',
+    name: 'Jordan',
     age: 28,
     bio: "Adventurous soul who loves hiking, trying new food trucks, and spending weekends with my dog, Rusty. Looking for someone to join my next adventure.",
     imageUrl: 'https://picsum.photos/seed/you/800/1200',
@@ -15,6 +13,8 @@ export const USERS: User[] = [
     coordinates: { lat: 37.7749, lon: -122.4194 },
     viewCount: 0,
     profileVisibility: 'public',
+    relationshipGoal: 'Long-term',
+    lifestyle: { smoking: 'No', drinking: 'Socially', exercise: 'Active' }
   },
   {
     id: 2,
@@ -27,6 +27,8 @@ export const USERS: User[] = [
     coordinates: { lat: 37.7577, lon: -122.4376 },
     viewCount: 152,
     profileVisibility: 'public',
+    relationshipGoal: 'Life Partner',
+    lifestyle: { smoking: 'No', drinking: 'Socially', exercise: 'Sometimes' }
   },
   {
     id: 3,
@@ -39,6 +41,8 @@ export const USERS: User[] = [
     coordinates: { lat: 34.0522, lon: -118.2437 },
     viewCount: 203,
     profileVisibility: 'public',
+    relationshipGoal: 'Figuring it out',
+    lifestyle: { smoking: 'No', drinking: 'No', exercise: 'Active' }
   },
   {
     id: 4,
@@ -51,6 +55,8 @@ export const USERS: User[] = [
     coordinates: { lat: 32.7157, lon: -117.1611 },
     viewCount: 410,
     profileVisibility: 'public',
+    relationshipGoal: 'Long-term',
+    lifestyle: { smoking: 'No', drinking: 'Socially', exercise: 'Active' }
   },
   {
     id: 5,
@@ -63,6 +69,8 @@ export const USERS: User[] = [
     coordinates: { lat: 45.5051, lon: -122.6750 },
     viewCount: 351,
     profileVisibility: 'public',
+    relationshipGoal: 'New friends',
+    lifestyle: { smoking: 'No', drinking: 'Socially', exercise: 'Sometimes' }
   },
   {
     id: 6,
@@ -75,6 +83,8 @@ export const USERS: User[] = [
     coordinates: { lat: 37.8044, lon: -122.2712 },
     viewCount: 188,
     profileVisibility: 'public',
+    relationshipGoal: 'Short-term',
+    lifestyle: { smoking: 'Yes', drinking: 'Yes', exercise: 'Rarely' }
   },
   {
     id: 7,
@@ -87,6 +97,8 @@ export const USERS: User[] = [
     coordinates: { lat: 40.7128, lon: -74.0060 },
     viewCount: 520,
     profileVisibility: 'public',
+    relationshipGoal: 'Long-term',
+    lifestyle: { smoking: 'No', drinking: 'Socially', exercise: 'Active' }
   },
   {
     id: 8,
@@ -99,6 +111,8 @@ export const USERS: User[] = [
     coordinates: { lat: 41.8781, lon: -87.6298 },
     viewCount: 98,
     profileVisibility: 'public',
+    relationshipGoal: 'Life Partner',
+    lifestyle: { smoking: 'No', drinking: 'Yes', exercise: 'Sometimes' }
   },
 ];
 
@@ -108,4 +122,18 @@ export const EMOJIS: Record<string, string[]> = {
   'Animals & Nature': ['🐶', '🐱', '🦄', '🦊', '🌿', '🌸', '☀️', '🌙', '🌎', '🌊'],
   'Food & Drink': ['🍕', '🍔', '🍣', '🥑', '☕️', '🍻', '🎂', '🍦', '🍓'],
   'Objects': ['📱', '💻', '🎸', '⚽️', '✈️', '🚀', '💡', '💎', '🎁', '🔑'],
+};
+
+export const RELATIONSHIP_GOALS = [
+    'Long-term',
+    'Short-term',
+    'New friends',
+    'Figuring it out',
+    'Life Partner'
+];
+
+export const LIFESTYLE_OPTIONS = {
+    smoking: ['Yes', 'No', 'Socially'],
+    drinking: ['Yes', 'No', 'Socially'],
+    exercise: ['Active', 'Sometimes', 'Rarely', 'Never']
 };

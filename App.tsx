@@ -22,7 +22,32 @@ interface Filters {
   }
 }
 
-// --- Helper Functions ---
+// --- Helper Functions for Persistence ---
+const getStoredLikes = (): Record<number, number[]> => {
+    try {
+        return JSON.parse(localStorage.getItem('gemini-cupid-likes') || '{}');
+    } catch { return {}; }
+};
+
+const saveStoredLike = (fromId: number, toId: number) => {
+    const likes = getStoredLikes();
+    if (!likes[fromId]) likes[fromId] = [];
+    if (!likes[fromId].includes(toId)) {
+        likes[fromId].push(toId);
+        localStorage.setItem('gemini-cupid-likes', JSON.stringify(likes));
+    }
+    return likes;
+};
+
+const removeStoredLike = (fromId: number, toId: number) => {
+    const likes = getStoredLikes();
+    if (likes[fromId]) {
+        likes[fromId] = likes[fromId].filter(id => id !== toId);
+        localStorage.setItem('gemini-cupid-likes', JSON.stringify(likes));
+    }
+    return likes;
+};
+
 const getDistanceFromLatLonInMi = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
     const R = 3959; // Radius of the earth in miles
     const dLat = (lat2 - lat1) * (Math.PI / 180);
@@ -543,7 +568,13 @@ const RequestsScreen: React.FC<{
             </header>
             <div className="p-4 h-full overflow-y-auto">
                 {usersWhoLikeYou.length === 0 ? (
-                    <p className="text-gray-500 text-center mt-8">No new friend requests right now. Check back later!</p>
+                    <div className="flex flex-col items-center justify-center h-64 text-center">
+                        <div className="bg-gray-100 p-6 rounded-full mb-4">
+                             <UserPlusIcon className="w-12 h-12 text-gray-400" />
+                        </div>
+                        <h3 className="text-lg font-semibold text-gray-700">No new requests</h3>
+                        <p className="text-gray-500 mt-2 px-8">When people like your profile, they will appear here.</p>
+                    </div>
                 ) : (
                     <div className="grid grid-cols-2 gap-4">
                         {usersWhoLikeYou.map(user => (
@@ -1479,6 +1510,7 @@ export default function App() {
     });
     
     const [currentIndex, setCurrentIndex] = useState(0);
+    // Replace local likedIds with derived logic from persistent store
     const [likedIds, setLikedIds] = useState<Set<number>>(new Set());
     const [superLikedIds, setSuperLikedIds] = useState<Set<number>>(new Set());
     const [blockedUserIds, setBlockedUserIds] = useState<Set<number>>(new Set());
@@ -1495,7 +1527,7 @@ export default function App() {
     const undoTimeoutRef = useRef<number | null>(null);
     const currentActionRef = useRef<'like' | 'pass' | 'superlike' | null>(null);
     
-    const [friendRequests, setFriendRequests] = useState<Set<number>>(new Set([4, 7]));
+    const [friendRequests, setFriendRequests] = useState<Set<number>>(new Set());
     const [currentUserCoords, setCurrentUserCoords] = useState<{ lat: number; lon: number } | null>(null);
 
     // Load Users from LocalStorage or Seed
@@ -1521,17 +1553,56 @@ export default function App() {
         }
     }, [users]);
 
-    // Handle Login/Logout persistence
+    // Handle Login/Logout persistence and State Updates
     useEffect(() => {
         if (currentUserId) {
             localStorage.setItem('gemini-cupid-current-user-id', currentUserId.toString());
-            // Make sure we aren't in auth view if logged in
             if (activeView === 'auth') setActiveView('swipe');
+
+            // Calculate interactions based on persistent store
+            const allLikes = getStoredLikes();
+            const myLikes = allLikes[currentUserId] || [];
+            const incomingLikes: number[] = [];
+            
+            // Find who liked me
+            Object.entries(allLikes).forEach(([likerId, likedList]) => {
+                 if (likedList.includes(currentUserId)) {
+                     incomingLikes.push(parseInt(likerId));
+                 }
+            });
+
+            const newMatches: Match[] = [];
+            const newRequests = new Set<number>();
+            const newLikedIds = new Set<number>(myLikes);
+
+            incomingLikes.forEach(likerId => {
+                if (myLikes.includes(likerId)) {
+                    // Mutual Like -> Match
+                    const otherUser = users.find(u => u.id === likerId);
+                    const me = users.find(u => u.id === currentUserId);
+                    if (otherUser && me) {
+                        newMatches.push({
+                            id: [currentUserId, likerId].sort().join('-'),
+                            users: [me, otherUser],
+                            timestamp: new Date(), // In a real app, fetch from DB
+                            isSuperLike: false
+                        });
+                    }
+                } else {
+                    // Only they liked me -> Request
+                    newRequests.add(likerId);
+                }
+            });
+            
+            setLikedIds(newLikedIds);
+            setMatches(newMatches);
+            setFriendRequests(newRequests);
+
         } else {
             localStorage.removeItem('gemini-cupid-current-user-id');
             setActiveView('auth');
         }
-    }, [currentUserId, activeView]);
+    }, [currentUserId, activeView, users]);
 
     // Load blocked users
     useEffect(() => {
@@ -1557,8 +1628,7 @@ export default function App() {
                 });
             },
             (error) => {
-                console.warn("Geolocation access denied or error:", error.message);
-                // Fallback logic handled in profilesWithDistance
+                // Silently handle error for UX
             }
         );
     }, []);
@@ -1571,6 +1641,10 @@ export default function App() {
     const handleSignup = (newUser: User) => {
         setUsers(prev => [...prev, newUser]);
         setCurrentUserId(newUser.id);
+        // New users start fresh
+        setMatches([]);
+        setLikedIds(new Set());
+        setFriendRequests(new Set());
         setActiveView('swipe');
     };
 
@@ -1610,8 +1684,10 @@ export default function App() {
     }, [users, currentUserCoords, currentUserId, currentUser]);
 
     const filteredProfiles = useMemo(() => {
+        // Filter out users we have already liked (unless we undid it, handled by local state sync)
+        // And blocked users, and private profiles
         return profilesWithDistance
-            .filter(u => !blockedUserIds.has(u.id) && u.profileVisibility === 'public')
+            .filter(u => !blockedUserIds.has(u.id) && u.profileVisibility === 'public' && !likedIds.has(u.id))
             .filter(user => {
                 const isAgeMatch = user.age >= filters.ageRange.min && user.age <= filters.ageRange.max;
                 const isInterestMatch = filters.interests.length === 0 || filters.interests.some(interest => user.interests.includes(interest));
@@ -1626,7 +1702,7 @@ export default function App() {
 
                 return isAgeMatch && isInterestMatch && isDistanceMatch && isGoalMatch && isSmokingMatch && isDrinkingMatch && isExerciseMatch;
             });
-    }, [profilesWithDistance, filters, blockedUserIds]);
+    }, [profilesWithDistance, filters, blockedUserIds, likedIds]);
     
     const allInterests = useMemo(() => {
         const interestsSet = new Set<string>();
@@ -1684,9 +1760,10 @@ export default function App() {
         if (direction === 'right') {
             const likedUser = swipedUser;
             const wasSuperLike = swipeType === 'superlike';
-            // Super likes have a higher chance of matching
-            const isMutual = Math.random() < (wasSuperLike ? 0.75 : 0.3);
             
+            // PERSISTENCE: Save the like to storage
+            saveStoredLike(currentUser.id, likedUser.id);
+
             const newLikedIds = new Set<number>(likedIds).add(likedUser.id);
             setLikedIds(newLikedIds);
 
@@ -1694,13 +1771,29 @@ export default function App() {
                 const newSuperLikedIds = new Set<number>(superLikedIds).add(likedUser.id);
                 setSuperLikedIds(newSuperLikedIds);
             }
+            
+            // CHECK FOR MATCH: Did they like me?
+            const allLikes = getStoredLikes();
+            const isMutual = allLikes[likedUser.id] && allLikes[likedUser.id].includes(currentUser.id);
 
             if (isMutual) {
-                setMatches(prevMatches => [
-                    ...prevMatches,
-                    { id: `${currentUser.id}-${likedUser.id}`, users: [currentUser, likedUser], timestamp: new Date(), isSuperLike: wasSuperLike }
-                ]);
+                const newMatchData: Match = { 
+                    id: [currentUser.id, likedUser.id].sort().join('-'), 
+                    users: [currentUser, likedUser], 
+                    timestamp: new Date(), 
+                    isSuperLike: wasSuperLike 
+                };
+                
+                setMatches(prevMatches => [...prevMatches, newMatchData]);
                 setNewMatch({ user: likedUser, isSuperLike: wasSuperLike });
+                
+                // Remove from requests if it was there
+                setFriendRequests(prev => {
+                    const newSet = new Set<number>(prev);
+                    newSet.delete(likedUser.id);
+                    return newSet;
+                });
+
             } else {
                 setCurrentIndex(prevIndex => prevIndex + 1);
             }
@@ -1722,6 +1815,9 @@ export default function App() {
         setCurrentIndex(index);
 
         if (type === 'like' || type === 'superlike') {
+            // PERSISTENCE: Remove the like
+            removeStoredLike(currentUser.id, user.id);
+
             setLikedIds(prev => {
                 const newSet = new Set<number>(prev);
                 newSet.delete(user.id);
@@ -1736,7 +1832,7 @@ export default function App() {
                 });
             }
 
-            const matchId = `${currentUser.id}-${user.id}`;
+            const matchId = [currentUser.id, user.id].sort().join('-');
             const wasMatch = matches.some(m => m.id === matchId);
             if (wasMatch) {
                 setMatches(prev => prev.filter(m => m.id !== matchId));
@@ -1755,9 +1851,12 @@ export default function App() {
         const likedUser = users.find(u => u.id === userId);
         if (!likedUser) return;
         
+        // PERSISTENCE: I accept, meaning I like them back
+        saveStoredLike(currentUser.id, userId);
+        
         setMatches(prevMatches => [
             ...prevMatches,
-            { id: `${currentUser.id}-${likedUser.id}`, users: [currentUser, likedUser], timestamp: new Date(), isSuperLike: false }
+            { id: [currentUser.id, userId].sort().join('-'), users: [currentUser, likedUser], timestamp: new Date(), isSuperLike: false }
         ]);
         
         setNewMatch({ user: likedUser, isSuperLike: false });
@@ -1770,6 +1869,8 @@ export default function App() {
     };
 
     const handleRejectRequest = (userId: number) => {
+        // Visually remove from list, essentially a 'pass' but specific to requests
+        // We could persist a 'pass' so they don't show up again, or just remove locally
         setFriendRequests(prev => {
             const newSet = new Set<number>(prev);
             newSet.delete(userId);
@@ -1887,7 +1988,8 @@ export default function App() {
         setActiveView('swipe');
         setNewMatch(null);
         setActiveChatUser(null);
-        setMessages({}); // Reset local chat view for demo
+        // Note: In a real app, messages would be re-fetched here. 
+        // For this persistent demo, `messages` state holds everything by chatId, so it persists.
     };
     
     const handleForceMatch = (targetUserId: number) => {
@@ -1895,6 +1997,10 @@ export default function App() {
         if (!targetUser || !currentUser) return;
         
         const matchId = [currentUserId!, targetUserId].sort().join('-');
+        
+        // PERSISTENCE: Force both to like each other
+        saveStoredLike(currentUser.id, targetUserId);
+        saveStoredLike(targetUserId, currentUser.id);
         
         if (!matches.some(m => m.id === matchId)) {
             setMatches(prev => [...prev, {

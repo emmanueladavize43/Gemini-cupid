@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { User, Match, Message, RelationshipGoal, Lifestyle } from './types';
+import { User, Match, Message, RelationshipGoal, Lifestyle, Gender, InterestedIn } from './types';
 import { INITIAL_USERS, EMOJIS, RELATIONSHIP_GOALS, LIFESTYLE_OPTIONS } from './constants';
 import { generateIcebreakers, generateQuickReplies } from './services/geminiService';
 import { HeartIcon, XMarkIcon, SparklesIcon, ChatBubbleIcon, FireIcon, UserIcon, AdjustmentsHorizontalIcon, EyeIcon, StarIcon, ShieldExclamationIcon, UndoIcon, UserPlusIcon, FaceSmileIcon, BoltIcon, VideoCameraIcon, MicrophoneIcon, PhoneIcon, VideoCameraSlashIcon, MicrophoneSlashIcon, PlayIcon, PauseIcon, MapPinIcon, GeminiCupidLogo, GoalIcon, SmokingIcon, DrinkingIcon, ExerciseIcon, CheckBadgeIcon, MagnifyingGlassIcon, BellIcon, CameraIcon } from './components/Icons';
@@ -61,6 +61,10 @@ const getDistanceFromLatLonInMi = (lat1: number, lon1: number, lat2: number, lon
     return Math.round(d);
 };
 
+const getMatchId = (uid1: number, uid2: number) => {
+    return `${Math.min(uid1, uid2)}-${Math.max(uid1, uid2)}`;
+};
+
 // --- Reusable Components ---
 
 const SplashScreen: React.FC<{ onFinished: () => void }> = ({ onFinished }) => {
@@ -94,7 +98,8 @@ const AuthScreen: React.FC<{
     const [newBio, setNewBio] = useState("");
     const [newInterest, setNewInterest] = useState("");
     const [newInterests, setNewInterests] = useState<string[]>([]);
-    const [gender, setGender] = useState("female"); // Simple toggle for random avatar generation
+    const [gender, setGender] = useState<Gender>("female");
+    const [interestedIn, setInterestedIn] = useState<InterestedIn>("male");
     const [isCreating, setIsCreating] = useState(false);
 
     const handleAddInterest = () => {
@@ -125,7 +130,9 @@ const AuthScreen: React.FC<{
                 viewCount: 0,
                 profileVisibility: 'public',
                 relationshipGoal: 'Figuring it out',
-                lifestyle: { smoking: 'No', drinking: 'Socially', exercise: 'Sometimes' }
+                lifestyle: { smoking: 'No', drinking: 'Socially', exercise: 'Sometimes' },
+                gender: gender,
+                interestedIn: interestedIn
             };
             onSignup(newUser);
             setIsCreating(false);
@@ -205,12 +212,21 @@ const AuthScreen: React.FC<{
                                 />
                             </div>
                              <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Avatar Style</label>
-                                <select value={gender} onChange={(e) => setGender(e.target.value)} className="w-full p-3 border rounded-xl bg-gray-50">
-                                    <option value="female">Style A</option>
-                                    <option value="male">Style B</option>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Gender</label>
+                                <select value={gender} onChange={(e) => setGender(e.target.value as Gender)} className="w-full p-3 border rounded-xl bg-gray-50">
+                                    <option value="female">Female</option>
+                                    <option value="male">Male</option>
+                                    <option value="non-binary">Non-Binary</option>
                                 </select>
                             </div>
+                        </div>
+                         <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Interested In</label>
+                            <select value={interestedIn} onChange={(e) => setInterestedIn(e.target.value as InterestedIn)} className="w-full p-3 border rounded-xl bg-gray-50">
+                                <option value="male">Men</option>
+                                <option value="female">Women</option>
+                                <option value="everyone">Everyone</option>
+                            </select>
                         </div>
                          <div>
                             <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Bio</label>
@@ -476,6 +492,7 @@ const ProfileDetailScreen: React.FC<{ user: User; onClose: () => void }> = ({ us
                     
                     <div className="mt-6">
                         <h2 className="text-4xl font-bold text-gray-800">{user.name}, <span className="font-light">{user.age}</span></h2>
+                        <p className="text-sm text-gray-500 capitalize">{user.gender}</p>
                         <div className="flex items-center gap-4 mt-2 text-gray-500">
                              {typeof user.distance === 'number' && (
                                 <div className="flex items-center">
@@ -1381,6 +1398,33 @@ const ProfileEditScreen: React.FC<{ user: User; onSave: (u: User) => void; onBac
                     </p>
                 </div>
 
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-bold text-gray-500 uppercase mb-1">Gender</label>
+                        <select 
+                            value={editedUser.gender || 'male'} 
+                            onChange={(e) => setEditedUser({...editedUser, gender: e.target.value as Gender})}
+                            className="w-full p-3 border rounded-xl bg-gray-50"
+                        >
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                            <option value="non-binary">Non-Binary</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-gray-500 uppercase mb-1">Interested In</label>
+                        <select 
+                            value={editedUser.interestedIn || 'female'} 
+                            onChange={(e) => setEditedUser({...editedUser, interestedIn: e.target.value as InterestedIn})}
+                            className="w-full p-3 border rounded-xl bg-gray-50"
+                        >
+                            <option value="male">Men</option>
+                            <option value="female">Women</option>
+                            <option value="everyone">Everyone</option>
+                        </select>
+                    </div>
+                </div>
+
                 <div>
                     <label className="block text-sm font-bold text-gray-500 uppercase mb-1">Bio</label>
                     <textarea 
@@ -1572,6 +1616,9 @@ const App = () => {
       if (!currentUser) return 0;
       let count = 0;
       matches.forEach(m => {
+          // Only count matches that belong to current user
+          if (!m.users.some(u => u.id === currentUser.id)) return;
+
           const other = m.users.find(u => u.id !== currentUser.id);
           if (!other) return;
           const chatMsgs = messages[m.id] || [];
@@ -1598,6 +1645,9 @@ const App = () => {
   const unreadChatsList = useMemo(() => {
       if (!currentUser) return [];
       return matches.map(m => {
+          // Ensure match belongs to user
+          if (!m.users.some(u => u.id === currentUser.id)) return null;
+          
           const other = m.users.find(u => u.id !== currentUser.id);
           if (!other) return null;
           const chatMsgs = messages[m.id] || [];
@@ -1639,15 +1689,18 @@ const App = () => {
         // Check Match
         if (newLikes[swipedUser.id]?.includes(currentUser.id)) {
             const newMatch: Match = {
-                id: `${Math.min(currentUser.id, swipedUser.id)}-${Math.max(currentUser.id, swipedUser.id)}`,
+                id: getMatchId(currentUser.id, swipedUser.id),
                 users: [currentUser, swipedUser],
                 timestamp: new Date(),
                 isSuperLike: false
             };
-            const updatedMatches = [...matches, newMatch];
-            setMatches(updatedMatches);
-            localStorage.setItem('gemini-cupid-matches', JSON.stringify(updatedMatches));
-            setMatchNotification({ user: swipedUser, isSuperLike: false });
+            // Avoid duplicates in state if weird race condition
+            if (!matches.some(m => m.id === newMatch.id)) {
+                const updatedMatches = [...matches, newMatch];
+                setMatches(updatedMatches);
+                localStorage.setItem('gemini-cupid-matches', JSON.stringify(updatedMatches));
+                setMatchNotification({ user: swipedUser, isSuperLike: false });
+            }
         }
     }
   };
@@ -1659,10 +1712,8 @@ const App = () => {
   const handleSendMessage = (type: 'text' | 'sticker' | 'voice', content: string) => {
       if (!currentUser || !currentChatUser) return;
       
-      const match = matches.find(m => 
-          (m.users[0].id === currentUser.id && m.users[1].id === currentChatUser.id) || 
-          (m.users[1].id === currentUser.id && m.users[0].id === currentChatUser.id)
-      );
+      const matchId = getMatchId(currentUser.id, currentChatUser.id);
+      const match = matches.find(m => m.id === matchId);
 
       if (match) {
           const newMessage: Message = {
@@ -1690,12 +1741,13 @@ const App = () => {
 
       // Mark messages as read
       if (!currentUser) return;
-      const match = matches.find(m => m.users.some(u => u.id === user.id) && m.users.some(u => u.id === currentUser.id));
-      if (match && messages[match.id]) {
-          const updatedChatMessages = messages[match.id].map(msg => 
+      const matchId = getMatchId(currentUser.id, user.id);
+      
+      if (messages[matchId]) {
+          const updatedChatMessages = messages[matchId].map(msg => 
               msg.senderId !== currentUser.id ? { ...msg, read: true } : msg
           );
-          const updatedMessages = { ...messages, [match.id]: updatedChatMessages };
+          const updatedMessages = { ...messages, [matchId]: updatedChatMessages };
           setMessages(updatedMessages);
           localStorage.setItem('gemini-cupid-messages', JSON.stringify(updatedMessages));
       }
@@ -1721,7 +1773,7 @@ const App = () => {
       setLikes({...l1, ...l2}); // Merge for safety, though saveStoredLike reads from storage
 
       // Create Match
-      const matchId = `${Math.min(currentUser.id, targetId)}-${Math.max(currentUser.id, targetId)}`;
+      const matchId = getMatchId(currentUser.id, targetId);
       if (!matches.some(m => m.id === matchId)) {
           const newMatch: Match = {
               id: matchId,
@@ -1754,8 +1806,17 @@ const App = () => {
       // Filter out people we already liked (Friend requests handle the reverse)
       const myLikes = likes[currentUser.id] || [];
       candidates = candidates.filter(u => !myLikes.includes(u.id));
+      
+      // 2. Apply Gender Preferences
+      if (currentUser.interestedIn !== 'everyone') {
+          candidates = candidates.filter(u => u.gender === currentUser.interestedIn);
+      }
+      
+      // Optional: Reciprocal Check (Only show people who are interested in current user's gender)
+      // This makes "Type A accessing Type B" stricter and more realistic
+      candidates = candidates.filter(u => u.interestedIn === 'everyone' || u.interestedIn === currentUser.gender);
 
-      // 2. Apply Preferences Filters
+      // 3. Apply Preferences Filters
       candidates = candidates.filter(u => u.age >= filters.ageRange.min && u.age <= filters.ageRange.max);
       
       if (filters.relationshipGoal) {
@@ -1774,7 +1835,7 @@ const App = () => {
           }
       }
 
-      // 3. Calculate Distance & Sort
+      // 4. Calculate Distance & Sort
       const withDist = candidates.map(u => {
           const dist = getDistanceFromLatLonInMi(
               currentUser.coordinates.lat, currentUser.coordinates.lon,
@@ -1855,7 +1916,7 @@ const App = () => {
 
             {activeView === 'matches' && (
                 <MatchesScreen 
-                    matches={matches} 
+                    matches={matches.filter(m => m.users.some(u => u.id === currentUser.id))} 
                     currentUser={currentUser} 
                     onSelectChat={handleOpenChat} 
                     messages={messages}
@@ -1901,7 +1962,7 @@ const App = () => {
                     user={currentChatUser} 
                     currentUser={currentUser}
                     onBack={() => setActiveView('matches')} 
-                    messages={matches.find(m => m.users.some(u => u.id === currentChatUser.id)) ? (messages[matches.find(m => m.users.some(u => u.id === currentChatUser.id))!.id] || []) : []}
+                    messages={messages[getMatchId(currentUser.id, currentChatUser.id)] || []}
                     onSendMessage={handleSendMessage}
                 />
             )}

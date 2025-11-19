@@ -1,3 +1,4 @@
+
 import { User } from './types';
 
 // We remove the hardcoded CURRENT_USER_ID as it will be determined by Auth
@@ -14,7 +15,9 @@ export const INITIAL_USERS: User[] = [
     viewCount: 0,
     profileVisibility: 'public',
     relationshipGoal: 'Long-term',
-    lifestyle: { smoking: 'No', drinking: 'Socially', exercise: 'Active' }
+    lifestyle: { smoking: 'No', drinking: 'Socially', exercise: 'Active' },
+    gender: 'male',
+    interestedIn: 'female'
   },
   {
     id: 2,
@@ -28,7 +31,9 @@ export const INITIAL_USERS: User[] = [
     viewCount: 152,
     profileVisibility: 'public',
     relationshipGoal: 'Life Partner',
-    lifestyle: { smoking: 'No', drinking: 'Socially', exercise: 'Sometimes' }
+    lifestyle: { smoking: 'No', drinking: 'Socially', exercise: 'Sometimes' },
+    gender: 'male',
+    interestedIn: 'female'
   },
   {
     id: 3,
@@ -42,7 +47,9 @@ export const INITIAL_USERS: User[] = [
     viewCount: 203,
     profileVisibility: 'public',
     relationshipGoal: 'Figuring it out',
-    lifestyle: { smoking: 'No', drinking: 'No', exercise: 'Active' }
+    lifestyle: { smoking: 'No', drinking: 'No', exercise: 'Active' },
+    gender: 'female',
+    interestedIn: 'male'
   },
   {
     id: 4,
@@ -56,7 +63,9 @@ export const INITIAL_USERS: User[] = [
     viewCount: 410,
     profileVisibility: 'public',
     relationshipGoal: 'Long-term',
-    lifestyle: { smoking: 'No', drinking: 'Socially', exercise: 'Active' }
+    lifestyle: { smoking: 'No', drinking: 'Socially', exercise: 'Active' },
+    gender: 'male',
+    interestedIn: 'female'
   },
   {
     id: 5,
@@ -70,7 +79,9 @@ export const INITIAL_USERS: User[] = [
     viewCount: 351,
     profileVisibility: 'public',
     relationshipGoal: 'New friends',
-    lifestyle: { smoking: 'No', drinking: 'Socially', exercise: 'Sometimes' }
+    lifestyle: { smoking: 'No', drinking: 'Socially', exercise: 'Sometimes' },
+    gender: 'female',
+    interestedIn: 'male'
   },
   {
     id: 6,
@@ -84,7 +95,9 @@ export const INITIAL_USERS: User[] = [
     viewCount: 188,
     profileVisibility: 'public',
     relationshipGoal: 'Short-term',
-    lifestyle: { smoking: 'Yes', drinking: 'Yes', exercise: 'Rarely' }
+    lifestyle: { smoking: 'Yes', drinking: 'Yes', exercise: 'Rarely' },
+    gender: 'male',
+    interestedIn: 'female'
   },
   {
     id: 7,
@@ -98,7 +111,9 @@ export const INITIAL_USERS: User[] = [
     viewCount: 520,
     profileVisibility: 'public',
     relationshipGoal: 'Long-term',
-    lifestyle: { smoking: 'No', drinking: 'Socially', exercise: 'Active' }
+    lifestyle: { smoking: 'No', drinking: 'Socially', exercise: 'Active' },
+    gender: 'female',
+    interestedIn: 'everyone'
   },
   {
     id: 8,
@@ -112,7 +127,9 @@ export const INITIAL_USERS: User[] = [
     viewCount: 98,
     profileVisibility: 'public',
     relationshipGoal: 'Life Partner',
-    lifestyle: { smoking: 'No', drinking: 'Yes', exercise: 'Sometimes' }
+    lifestyle: { smoking: 'No', drinking: 'Yes', exercise: 'Sometimes' },
+    gender: 'male',
+    interestedIn: 'female'
   },
 ];
 

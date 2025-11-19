@@ -6,6 +6,8 @@ export interface Lifestyle {
 }
 
 export type RelationshipGoal = string;
+export type Gender = 'male' | 'female' | 'non-binary';
+export type InterestedIn = 'male' | 'female' | 'everyone';
 
 export interface User {
   id: number;
@@ -24,6 +26,8 @@ export interface User {
   profileVisibility: 'public' | 'private';
   relationshipGoal?: RelationshipGoal;
   lifestyle?: Lifestyle;
+  gender: Gender;
+  interestedIn: InterestedIn;
 }
 
 export interface Match {

@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { User, Match, Message, RelationshipGoal, Lifestyle } from './types';
 import { INITIAL_USERS, EMOJIS, RELATIONSHIP_GOALS, LIFESTYLE_OPTIONS } from './constants';
 import { generateIcebreakers, generateQuickReplies } from './services/geminiService';
-import { HeartIcon, XMarkIcon, SparklesIcon, ChatBubbleIcon, FireIcon, UserIcon, AdjustmentsHorizontalIcon, EyeIcon, StarIcon, ShieldExclamationIcon, UndoIcon, UserPlusIcon, FaceSmileIcon, BoltIcon, VideoCameraIcon, MicrophoneIcon, PhoneIcon, VideoCameraSlashIcon, MicrophoneSlashIcon, PlayIcon, PauseIcon, MapPinIcon, GeminiCupidLogo, GoalIcon, SmokingIcon, DrinkingIcon, ExerciseIcon, CheckBadgeIcon, MagnifyingGlassIcon } from './components/Icons';
+import { HeartIcon, XMarkIcon, SparklesIcon, ChatBubbleIcon, FireIcon, UserIcon, AdjustmentsHorizontalIcon, EyeIcon, StarIcon, ShieldExclamationIcon, UndoIcon, UserPlusIcon, FaceSmileIcon, BoltIcon, VideoCameraIcon, MicrophoneIcon, PhoneIcon, VideoCameraSlashIcon, MicrophoneSlashIcon, PlayIcon, PauseIcon, MapPinIcon, GeminiCupidLogo, GoalIcon, SmokingIcon, DrinkingIcon, ExerciseIcon, CheckBadgeIcon, MagnifyingGlassIcon, BellIcon } from './components/Icons';
 
 // --- Animation Constants ---
 const SWIPE_THRESHOLD = 120; // Min drag distance to trigger a swipe
@@ -403,6 +403,65 @@ const SwipeableProfileCard: React.FC<{
     );
 };
 
+const NotificationModal: React.FC<{ 
+    onClose: () => void; 
+    requests: User[];
+    unreadChats: { user: User, count: number }[];
+    onClickRequest: () => void;
+    onClickChat: (user: User) => void;
+}> = ({ onClose, requests, unreadChats, onClickRequest, onClickChat }) => {
+    return (
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-4" onClick={onClose}>
+            <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+                <div className="p-4 border-b flex justify-between items-center bg-pink-50">
+                    <h3 className="font-bold text-lg text-gray-800 flex items-center gap-2">
+                        <BellIcon className="w-5 h-5 text-pink-500" />
+                        Notifications
+                    </h3>
+                    <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+                        <XMarkIcon className="w-6 h-6" />
+                    </button>
+                </div>
+                <div className="max-h-[60vh] overflow-y-auto">
+                    {requests.length === 0 && unreadChats.length === 0 ? (
+                        <div className="p-8 text-center text-gray-500">
+                            <p>No new notifications.</p>
+                        </div>
+                    ) : (
+                        <div className="divide-y">
+                            {requests.length > 0 && (
+                                <div className="p-3 bg-pink-50/50 cursor-pointer hover:bg-pink-50 transition-colors" onClick={onClickRequest}>
+                                    <div className="flex items-center gap-3">
+                                        <div className="bg-pink-100 p-2 rounded-full text-pink-600">
+                                            <UserPlusIcon className="w-6 h-6" />
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-gray-800">{requests.length} New Likes</p>
+                                            <p className="text-sm text-gray-600">Check your friend requests!</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                            {unreadChats.map(({ user, count }) => (
+                                <div key={user.id} className="p-3 cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => onClickChat(user)}>
+                                    <div className="flex items-center gap-3">
+                                        <img src={user.imageUrl} className="w-10 h-10 rounded-full object-cover border-2 border-pink-100" />
+                                        <div className="flex-1">
+                                            <p className="font-bold text-gray-800">{user.name}</p>
+                                            <p className="text-sm text-gray-600">{count} unread message{count > 1 ? 's' : ''}</p>
+                                        </div>
+                                        <div className="w-2 h-2 bg-pink-500 rounded-full"></div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
 const ProfileDetailScreen: React.FC<{ user: User; onClose: () => void }> = ({ user, onClose }) => {
     return (
         <div className="absolute inset-0 bg-black/30 backdrop-blur-sm z-40 flex justify-center items-end" onClick={onClose}>
@@ -601,7 +660,7 @@ const RequestsScreen: React.FC<{
 };
 
 
-const Header: React.FC<{ activeView: string, setActiveView: (view: string) => void, requestsCount: number }> = ({ activeView, setActiveView, requestsCount }) => {
+const Header: React.FC<{ activeView: string, setActiveView: (view: string) => void, requestsCount: number, unreadMatchesCount: number }> = ({ activeView, setActiveView, requestsCount, unreadMatchesCount }) => {
     const baseClass = "relative p-3 text-gray-400 hover:text-pink-500 transition-colors";
     const activeClass = "text-pink-500";
     return (
@@ -615,7 +674,7 @@ const Header: React.FC<{ activeView: string, setActiveView: (view: string) => vo
              <button title="Friend Requests" onClick={() => setActiveView('requests')} className={`${baseClass} ${activeView === 'requests' ? activeClass : ''}`} aria-label="Friend Requests">
                 <UserPlusIcon className="w-8 h-8"/>
                 {requestsCount > 0 && (
-                    <span className="absolute top-1 right-1 block w-5 h-5 bg-pink-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{requestsCount}</span>
+                    <span className="absolute top-1 right-1 block w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center border-2 border-white">{requestsCount}</span>
                 )}
             </button>
              <button title="Filters" onClick={() => setActiveView('filters')} className={`${baseClass} ${activeView === 'filters' ? activeClass : ''}`} aria-label="Filters">
@@ -623,12 +682,15 @@ const Header: React.FC<{ activeView: string, setActiveView: (view: string) => vo
             </button>
             <button title="Matches" onClick={() => setActiveView('matches')} className={`${baseClass} ${activeView === 'matches' ? activeClass : ''}`} aria-label="View Matches">
                 <ChatBubbleIcon className="w-8 h-8"/>
+                {unreadMatchesCount > 0 && (
+                    <span className="absolute top-1 right-1 block w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center border-2 border-white">{unreadMatchesCount}</span>
+                )}
             </button>
         </header>
     );
 };
 
-const MatchesScreen: React.FC<{ matches: Match[], onSelectChat: (user: User) => void, currentUser: User }> = ({ matches, onSelectChat, currentUser }) => {
+const MatchesScreen: React.FC<{ matches: Match[], onSelectChat: (user: User) => void, currentUser: User, messages: Record<string, Message[]> }> = ({ matches, onSelectChat, currentUser, messages }) => {
     return (
         <div className="p-4 h-full overflow-y-auto bg-white">
             <h2 className="text-2xl font-bold text-gray-800 mb-4">Your Matches</h2>
@@ -639,6 +701,12 @@ const MatchesScreen: React.FC<{ matches: Match[], onSelectChat: (user: User) => 
                     {matches.map(match => {
                         const otherUser = match.users.find(u => u.id !== currentUser.id);
                         if (!otherUser) return null; // Should not happen
+                        
+                        // Check for unread messages
+                        const chatMessages = messages[match.id] || [];
+                        const lastMessage = chatMessages[chatMessages.length - 1];
+                        const isUnread = lastMessage && lastMessage.senderId !== currentUser.id && !lastMessage.read;
+
                         return (
                             <div key={match.id} onClick={() => onSelectChat(otherUser)} className="flex items-center p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors relative overflow-hidden">
                                 {match.isSuperLike && (
@@ -646,10 +714,25 @@ const MatchesScreen: React.FC<{ matches: Match[], onSelectChat: (user: User) => 
                                         <StarIcon className="w-5 h-5 text-blue-400" />
                                     </div>
                                 )}
-                                <img src={otherUser.imageUrl} alt={otherUser.name} className="w-16 h-16 rounded-full object-cover mr-4"/>
-                                <div>
-                                    <h3 className="font-semibold text-lg text-gray-800">{otherUser.name}</h3>
-                                    <p className="text-sm text-gray-500">You matched recently.</p>
+                                <div className="relative">
+                                    <img src={otherUser.imageUrl} alt={otherUser.name} className="w-16 h-16 rounded-full object-cover mr-4"/>
+                                    {isUnread && <div className="absolute top-0 right-3 w-4 h-4 bg-red-500 rounded-full border-2 border-white"></div>}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex justify-between items-center">
+                                        <h3 className={`font-semibold text-lg ${isUnread ? 'text-black' : 'text-gray-800'}`}>{otherUser.name}</h3>
+                                        {lastMessage && <span className="text-xs text-gray-400">{new Date(lastMessage.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>}
+                                    </div>
+                                    <p className={`text-sm truncate ${isUnread ? 'font-bold text-gray-900' : 'text-gray-500'}`}>
+                                        {lastMessage ? (
+                                            <>
+                                                {lastMessage.senderId === currentUser.id && 'You: '}
+                                                {lastMessage.type === 'sticker' ? 'Sent a sticker' : lastMessage.type === 'voice' ? 'Sent a voice message' : lastMessage.content}
+                                            </>
+                                        ) : (
+                                            "You matched recently."
+                                        )}
+                                    </p>
                                 </div>
                             </div>
                         )
@@ -1063,1090 +1146,789 @@ const ChatScreen: React.FC<{
                      </button>
                     
                     {inputValue.trim() === '' ? (
-                        <button
+                         <button
                             title="Record Voice"
                             onMouseDown={handleStartRecording}
                             onMouseUp={handleStopRecording}
                             onTouchStart={handleStartRecording}
                             onTouchEnd={handleStopRecording}
-                            className="p-2 text-gray-500 hover:text-pink-500"
+                            className={`p-2 rounded-full transition-colors ${isRecording ? 'bg-red-500 text-white animate-pulse' : 'text-gray-500 hover:text-pink-500'}`}
                             aria-label="Record voice message"
-                         >
+                        >
                             <MicrophoneIcon className="w-6 h-6" />
                         </button>
                     ) : (
-                        <button title="Send" onClick={handleSendText} className="bg-gradient-to-r from-pink-500 to-orange-400 text-white font-semibold rounded-full px-5 py-2">Send</button>
+                        <button
+                             title="Send Message"
+                            onClick={handleSendText}
+                            className="p-2 bg-pink-500 text-white rounded-full hover:bg-pink-600 transition-colors shadow-md"
+                            aria-label="Send message"
+                        >
+                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+                            </svg>
+                        </button>
                     )}
-                 </div>
+                </div>
             </div>
         </div>
     );
 };
 
-const ProfileEditScreen: React.FC<{
-    user: User;
-    allUsers: User[];
-    onSwitchUser: (userId: number) => void;
-    onForceMatch: (userId: number) => void;
-    onSave: (updatedUser: User) => void;
-    onBack: () => void;
-    blockedUsers: User[];
-    onUnblock: (userId: number) => void;
-    onLogout: () => void;
-}> = ({ user, allUsers, onSwitchUser, onForceMatch, onSave, onBack, blockedUsers, onUnblock, onLogout }) => {
-    const [formData, setFormData] = useState<User>(user);
-    const [newInterest, setNewInterest] = useState('');
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: name === 'age' ? parseInt(value) || 0 : value }));
-    };
-    
-    const handleVisibilityChange = (visibility: 'public' | 'private') => {
-        setFormData(prev => ({ ...prev, profileVisibility: visibility }));
-    };
-
-    const handleLifestyleChange = (type: keyof Lifestyle, value: string) => {
-        setFormData(prev => ({
-            ...prev,
-            lifestyle: {
-                ...prev.lifestyle,
-                [type]: value
-            }
-        }));
-    };
-
-    const handleAddInterest = () => {
-        if (newInterest.trim() && !formData.interests.includes(newInterest.trim())) {
-            setFormData(prev => ({ ...prev, interests: [...prev.interests, newInterest.trim()] }));
-            setNewInterest('');
-        }
-    };
-    
-    const handleInterestKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            handleAddInterest();
-        }
-    }
-
-    const handleRemoveInterest = (interestToRemove: string) => {
-        setFormData(prev => ({ ...prev, interests: prev.interests.filter(i => i !== interestToRemove) }));
-    };
-    
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        onSave(formData);
+const FilterScreen: React.FC<{ filters: Filters; setFilters: React.Dispatch<React.SetStateAction<Filters>>; onBack: () => void }> = ({ filters, setFilters, onBack }) => {
+    const handleLifestyleChange = (category: keyof Lifestyle, value: string) => {
+        setFilters(prev => {
+            const current = prev.lifestyle?.[category] || [];
+            const updated = current.includes(value) ? current.filter(v => v !== value) : [...current, value];
+            return {
+                ...prev,
+                lifestyle: { ...prev.lifestyle, [category]: updated }
+            };
+        });
     };
 
     return (
-        <div className="flex flex-col h-full bg-white">
-            <header className="flex items-center p-4 border-b sticky top-0 bg-white z-10">
+        <div className="flex flex-col h-full bg-white overflow-y-auto">
+             <header className="flex items-center p-4 border-b sticky top-0 bg-white z-10">
                 <button title="Back" onClick={onBack} className="text-gray-600 mr-4 text-2xl" aria-label="Go back">&larr;</button>
-                <h2 className="font-bold text-xl text-gray-800">Edit Profile</h2>
-                <button onClick={onLogout} className="ml-auto text-sm text-red-500 font-semibold">Log Out</button>
+                <h2 className="font-bold text-xl text-gray-800">Filters</h2>
             </header>
-            <form onSubmit={handleSubmit} className="p-6 space-y-6 flex-1 overflow-y-auto">
-                <div className="flex flex-col items-center">
-                    <img src={formData.imageUrl} alt={formData.name} className="w-32 h-32 rounded-full object-cover shadow-lg" />
+            <div className="p-6 space-y-8">
+                <div>
+                    <label className="block text-sm font-bold text-gray-500 uppercase mb-4">Maximum Distance</label>
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-gray-700">{filters.maxDistance} miles</span>
+                    </div>
+                    <input 
+                        type="range" min="1" max="100" value={filters.maxDistance} 
+                        onChange={(e) => setFilters({...filters, maxDistance: parseInt(e.target.value)})}
+                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-pink-500"
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-bold text-gray-500 uppercase mb-4">Age Range</label>
+                    <div className="flex items-center gap-4">
+                        <input 
+                            type="number" min="18" max="99" value={filters.ageRange.min}
+                            onChange={(e) => setFilters({...filters, ageRange: {...filters.ageRange, min: parseInt(e.target.value)}})}
+                            className="w-full p-2 border rounded-lg"
+                        />
+                        <span className="text-gray-400">-</span>
+                        <input 
+                             type="number" min="18" max="99" value={filters.ageRange.max}
+                            onChange={(e) => setFilters({...filters, ageRange: {...filters.ageRange, max: parseInt(e.target.value)}})}
+                            className="w-full p-2 border rounded-lg"
+                        />
+                    </div>
                 </div>
                 
-                <div>
-                    <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                    <input type="text" name="name" id="name" value={formData.name} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-pink-500 focus:border-pink-500" required />
+                 <div>
+                    <label className="block text-sm font-bold text-gray-500 uppercase mb-4">Relationship Goal</label>
+                    <select 
+                        value={filters.relationshipGoal || ''} 
+                        onChange={(e) => setFilters({...filters, relationshipGoal: e.target.value || undefined})}
+                        className="w-full p-3 border rounded-lg bg-gray-50"
+                    >
+                        <option value="">Any</option>
+                        {RELATIONSHIP_GOALS.map(goal => (
+                            <option key={goal} value={goal}>{goal}</option>
+                        ))}
+                    </select>
+                </div>
+                
+                 <div>
+                    <label className="block text-sm font-bold text-gray-500 uppercase mb-4">Lifestyle</label>
+                    <div className="space-y-4">
+                        <div>
+                            <span className="block text-xs font-semibold text-gray-600 mb-2">Smoking</span>
+                            <div className="flex flex-wrap gap-2">
+                                {LIFESTYLE_OPTIONS.smoking.map(opt => (
+                                    <button 
+                                        key={opt}
+                                        onClick={() => handleLifestyleChange('smoking', opt)}
+                                        className={`px-3 py-1 rounded-full text-sm border ${filters.lifestyle?.smoking?.includes(opt) ? 'bg-pink-500 text-white border-pink-500' : 'text-gray-600 border-gray-300'}`}
+                                    >
+                                        {opt}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                        <div>
+                            <span className="block text-xs font-semibold text-gray-600 mb-2">Drinking</span>
+                             <div className="flex flex-wrap gap-2">
+                                {LIFESTYLE_OPTIONS.drinking.map(opt => (
+                                    <button 
+                                        key={opt}
+                                        onClick={() => handleLifestyleChange('drinking', opt)}
+                                        className={`px-3 py-1 rounded-full text-sm border ${filters.lifestyle?.drinking?.includes(opt) ? 'bg-pink-500 text-white border-pink-500' : 'text-gray-600 border-gray-300'}`}
+                                    >
+                                        {opt}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                        <div>
+                            <span className="block text-xs font-semibold text-gray-600 mb-2">Exercise</span>
+                             <div className="flex flex-wrap gap-2">
+                                {LIFESTYLE_OPTIONS.exercise.map(opt => (
+                                    <button 
+                                        key={opt}
+                                        onClick={() => handleLifestyleChange('exercise', opt)}
+                                        className={`px-3 py-1 rounded-full text-sm border ${filters.lifestyle?.exercise?.includes(opt) ? 'bg-pink-500 text-white border-pink-500' : 'text-gray-600 border-gray-300'}`}
+                                    >
+                                        {opt}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button 
+                    onClick={onBack}
+                    className="w-full bg-pink-500 text-white font-bold py-3 rounded-xl shadow-lg mt-8"
+                >
+                    Apply Filters
+                </button>
+            </div>
+        </div>
+    );
+};
+
+const ProfileEditScreen: React.FC<{ user: User; onSave: (u: User) => void; onBack: () => void; allUsers: User[]; onSwitchUser: (id: number) => void; onForceMatch: (userId: number) => void; }> = ({ user, onSave, onBack, allUsers, onSwitchUser, onForceMatch }) => {
+    const [editedUser, setEditedUser] = useState(user);
+    const [interestInput, setInterestInput] = useState("");
+
+    const handleAddInterest = () => {
+        if (interestInput.trim() && !editedUser.interests.includes(interestInput.trim())) {
+            setEditedUser({...editedUser, interests: [...editedUser.interests, interestInput.trim()]});
+            setInterestInput("");
+        }
+    };
+    
+    const removeInterest = (interest: string) => {
+        setEditedUser({...editedUser, interests: editedUser.interests.filter(i => i !== interest)});
+    };
+
+    const handleLifestyleChange = (key: keyof Lifestyle, value: string) => {
+        setEditedUser({
+            ...editedUser,
+            lifestyle: { ...editedUser.lifestyle, [key]: value }
+        });
+    };
+
+    return (
+        <div className="flex flex-col h-full bg-white overflow-y-auto">
+             <header className="flex items-center p-4 border-b sticky top-0 bg-white z-10">
+                <button title="Back" onClick={onBack} className="text-gray-600 mr-4 text-2xl" aria-label="Go back">&larr;</button>
+                <h2 className="font-bold text-xl text-gray-800">Edit Profile</h2>
+                <button onClick={() => onSave(editedUser)} className="ml-auto text-pink-500 font-bold">Save</button>
+            </header>
+            <div className="p-6 space-y-6">
+                <div className="flex justify-center">
+                    <div className="relative">
+                        <img src={editedUser.imageUrl} alt="Profile" className="w-32 h-32 rounded-full object-cover border-4 border-pink-100"/>
+                        <button className="absolute bottom-0 right-0 bg-pink-500 text-white p-2 rounded-full shadow-md">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
 
                 <div>
-                    <label htmlFor="age" className="block text-sm font-medium text-gray-700 mb-1">Age</label>
-                    <input type="number" name="age" id="age" value={formData.age} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-pink-500 focus:border-pink-500" required />
+                    <label className="block text-sm font-bold text-gray-500 uppercase mb-1">Visibility</label>
+                    <div className="flex gap-4">
+                        <button 
+                            onClick={() => setEditedUser({...editedUser, profileVisibility: 'public'})}
+                            className={`flex-1 py-2 rounded-lg font-medium transition-colors ${editedUser.profileVisibility === 'public' ? 'bg-pink-500 text-white' : 'bg-gray-100 text-gray-600'}`}
+                        >
+                            Public
+                        </button>
+                        <button 
+                            onClick={() => setEditedUser({...editedUser, profileVisibility: 'private'})}
+                            className={`flex-1 py-2 rounded-lg font-medium transition-colors ${editedUser.profileVisibility === 'private' ? 'bg-pink-500 text-white' : 'bg-gray-100 text-gray-600'}`}
+                        >
+                            Private
+                        </button>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                        {editedUser.profileVisibility === 'public' 
+                            ? "Your profile is visible in the swipe deck." 
+                            : "Your profile is hidden. You can still chat with existing matches."}
+                    </p>
                 </div>
 
                 <div>
-                    <label htmlFor="bio" className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
-                    <textarea name="bio" id="bio" value={formData.bio} onChange={handleChange} rows={4} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-pink-500 focus:border-pink-500" required />
+                    <label className="block text-sm font-bold text-gray-500 uppercase mb-1">Bio</label>
+                    <textarea 
+                        value={editedUser.bio} onChange={(e) => setEditedUser({...editedUser, bio: e.target.value})}
+                        className="w-full p-3 border rounded-xl bg-gray-50" rows={3}
+                    />
                 </div>
-
-                <div>
-                    <label htmlFor="relationshipGoal" className="block text-sm font-medium text-gray-700 mb-1">Relationship Goal</label>
-                    <select name="relationshipGoal" id="relationshipGoal" value={formData.relationshipGoal || ''} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-pink-500 focus:border-pink-500">
-                        <option value="">Select a goal</option>
+                
+                 <div>
+                    <label className="block text-sm font-bold text-gray-500 uppercase mb-1">Relationship Goal</label>
+                    <select 
+                        value={editedUser.relationshipGoal} 
+                        onChange={(e) => setEditedUser({...editedUser, relationshipGoal: e.target.value})}
+                        className="w-full p-3 border rounded-xl bg-gray-50"
+                    >
                         {RELATIONSHIP_GOALS.map(goal => (
                             <option key={goal} value={goal}>{goal}</option>
                         ))}
                     </select>
                 </div>
 
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Lifestyle</label>
+                 <div>
+                    <label className="block text-sm font-bold text-gray-500 uppercase mb-2">Lifestyle</label>
                     <div className="grid grid-cols-3 gap-2">
-                        <div>
-                            <label className="text-xs text-gray-500">Smoking</label>
-                            <select value={formData.lifestyle?.smoking || ''} onChange={(e) => handleLifestyleChange('smoking', e.target.value)} className="w-full text-sm border rounded-md p-1">
-                                <option value="">-</option>
-                                {LIFESTYLE_OPTIONS.smoking.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="text-xs text-gray-500">Drinking</label>
-                             <select value={formData.lifestyle?.drinking || ''} onChange={(e) => handleLifestyleChange('drinking', e.target.value)} className="w-full text-sm border rounded-md p-1">
-                                <option value="">-</option>
-                                {LIFESTYLE_OPTIONS.drinking.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="text-xs text-gray-500">Exercise</label>
-                             <select value={formData.lifestyle?.exercise || ''} onChange={(e) => handleLifestyleChange('exercise', e.target.value)} className="w-full text-sm border rounded-md p-1">
-                                <option value="">-</option>
-                                {LIFESTYLE_OPTIONS.exercise.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                            </select>
-                        </div>
+                        <select 
+                            value={editedUser.lifestyle?.smoking} onChange={(e) => handleLifestyleChange('smoking', e.target.value)}
+                            className="p-2 border rounded-lg text-sm bg-gray-50"
+                        >
+                             <option value="">Smoking...</option>
+                            {LIFESTYLE_OPTIONS.smoking.map(o => <option key={o} value={o}>{o}</option>)}
+                        </select>
+                        <select 
+                             value={editedUser.lifestyle?.drinking} onChange={(e) => handleLifestyleChange('drinking', e.target.value)}
+                             className="p-2 border rounded-lg text-sm bg-gray-50"
+                        >
+                            <option value="">Drinking...</option>
+                            {LIFESTYLE_OPTIONS.drinking.map(o => <option key={o} value={o}>{o}</option>)}
+                        </select>
+                        <select 
+                             value={editedUser.lifestyle?.exercise} onChange={(e) => handleLifestyleChange('exercise', e.target.value)}
+                             className="p-2 border rounded-lg text-sm bg-gray-50"
+                        >
+                            <option value="">Exercise...</option>
+                            {LIFESTYLE_OPTIONS.exercise.map(o => <option key={o} value={o}>{o}</option>)}
+                        </select>
                     </div>
                 </div>
 
-
                 <div>
-                    <label htmlFor="add-interest" className="block text-sm font-medium text-gray-700 mb-1">Interests</label>
-                    <div className="flex flex-wrap gap-2 mb-2">
-                        {formData.interests.map(interest => (
-                            <span key={interest} className="flex items-center bg-pink-100 text-pink-800 text-sm font-semibold px-3 py-1 rounded-full">
-                                {interest}
-                                <button title="Remove Interest" type="button" onClick={() => handleRemoveInterest(interest)} className="ml-2 text-pink-600 hover:text-pink-800" aria-label={`Remove ${interest} interest`}>
-                                    <XMarkIcon className="w-3 h-3" />
-                                </button>
+                    <label className="block text-sm font-bold text-gray-500 uppercase mb-1">Interests</label>
+                    <div className="flex gap-2 mb-2">
+                        <input 
+                            type="text" value={interestInput} onChange={(e) => setInterestInput(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleAddInterest())}
+                            className="flex-1 p-3 border rounded-xl bg-gray-50" placeholder="Add interest"
+                        />
+                        <button onClick={handleAddInterest} className="bg-pink-100 text-pink-600 px-4 rounded-xl font-bold">+</button>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        {editedUser.interests.map(i => (
+                            <span key={i} className="bg-pink-50 text-pink-600 px-2 py-1 rounded-lg text-sm border border-pink-100 flex items-center gap-1">
+                                {i}
+                                <button onClick={() => removeInterest(i)} className="hover:text-pink-800">&times;</button>
                             </span>
                         ))}
                     </div>
-                    <div className="flex gap-2">
-                        <input type="text" id="add-interest" value={newInterest} onChange={(e) => setNewInterest(e.target.value)} onKeyDown={handleInterestKeyDown} placeholder="Add an interest" className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-pink-500 focus:border-pink-500" />
-                        <button title="Add Interest" type="button" onClick={handleAddInterest} className="px-4 py-2 bg-pink-500 text-white rounded-md font-semibold hover:bg-pink-600">Add</button>
-                    </div>
-                </div>
-                
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Profile Visibility</label>
-                    <div className="grid grid-cols-2 gap-2 p-1 bg-gray-100 rounded-lg">
-                        <button type="button" onClick={() => handleVisibilityChange('public')} className={`px-4 py-2 rounded-md text-sm font-semibold transition-colors ${formData.profileVisibility === 'public' ? 'bg-white text-pink-600 shadow' : 'bg-transparent text-gray-600'}`}>
-                            Public
-                        </button>
-                        <button type="button" onClick={() => handleVisibilityChange('private')} className={`px-4 py-2 rounded-md text-sm font-semibold transition-colors ${formData.profileVisibility === 'private' ? 'bg-white text-pink-600 shadow' : 'bg-transparent text-gray-600'}`}>
-                            Private
-                        </button>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-2">
-                      {formData.profileVisibility === 'public' 
-                        ? 'Your profile will be shown to others in the swipe deck.'
-                        : 'Your profile will be hidden. You can still chat with your matches.'}
-                    </p>
                 </div>
 
-                <div>
-                    <h3 className="text-lg font-medium text-gray-800 pt-6 border-t mt-6 mb-3">Blocked Users</h3>
-                     {blockedUsers.length > 0 ? (
-                        <ul className="space-y-3">
-                            {blockedUsers.map(blockedUser => (
-                                <li key={blockedUser.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                    <div className="flex items-center gap-3">
-                                        <img src={blockedUser.imageUrl} alt={blockedUser.name} className="w-10 h-10 rounded-full object-cover" />
-                                        <span className="text-gray-800 font-medium">{blockedUser.name}</span>
-                                    </div>
-                                    <button title="Unblock" type="button" onClick={() => onUnblock(blockedUser.id)} className="text-sm font-semibold text-red-600 hover:text-red-800 transition-colors">
-                                        Unblock
-                                    </button>
-                                </li>
-                            ))}
-                        </ul>
-                    ) : (
-                        <p className="text-sm text-gray-500 text-center py-4">You haven't blocked anyone.</p>
-                    )}
-                </div>
-
-                {/* Developer Mode: User Switcher */}
-                <div className="mt-8 border-t-2 border-gray-200 pt-6 bg-gray-50 rounded-xl p-4">
-                    <h3 className="text-lg font-bold text-gray-800 mb-2 flex items-center gap-2">
-                        <BoltIcon className="w-5 h-5 text-yellow-500" />
-                        Developer Tools
-                    </h3>
-                    <p className="text-xs text-gray-500 mb-4">Use these tools to simulate a conversation by switching between accounts.</p>
-                    
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Switch Account</label>
-                    <div className="grid grid-cols-2 gap-2 mb-4">
-                         {allUsers.map(u => (
-                             <button
-                                key={u.id}
-                                type="button"
-                                onClick={() => onSwitchUser(u.id)}
-                                className={`px-3 py-2 rounded-lg text-sm text-left flex items-center gap-2 transition-colors ${u.id === user.id ? 'bg-pink-100 ring-2 ring-pink-500' : 'bg-white hover:bg-gray-100 border'}`}
-                             >
-                                 <img src={u.imageUrl} className="w-6 h-6 rounded-full object-cover" alt="" />
-                                 <span className={`truncate ${u.id === user.id ? 'font-bold text-pink-800' : 'text-gray-700'}`}>
-                                     {u.name} {u.id === user.id && '(You)'}
-                                 </span>
-                             </button>
-                         ))}
-                    </div>
-
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Force Match</label>
-                    <div className="grid grid-cols-1 gap-2">
-                         {allUsers.filter(u => u.id !== user.id).map(u => (
-                             <button
-                                key={u.id}
-                                type="button"
-                                onClick={() => onForceMatch(u.id)}
-                                className="px-3 py-2 bg-white border rounded-lg text-sm text-gray-700 hover:bg-gray-50 flex items-center justify-between"
-                             >
-                                 <div className="flex items-center gap-2">
-                                    <img src={u.imageUrl} className="w-6 h-6 rounded-full object-cover" alt="" />
-                                    Match with {u.name}
-                                 </div>
-                                 <HeartIcon className="w-4 h-4 text-pink-500" />
-                             </button>
-                         ))}
-                    </div>
-                </div>
-
-
-                <div className="pt-4 sticky bottom-0 bg-white pb-6">
-                    <button type="submit" className="w-full bg-gradient-to-r from-pink-500 to-orange-400 text-white font-bold py-3 rounded-full shadow-lg hover:scale-105 transition-transform">
-                        Save Changes
-                    </button>
-                </div>
-            </form>
-        </div>
-    );
-};
-
-const FilterScreen: React.FC<{
-    currentFilters: Filters;
-    onApply: (newFilters: Filters) => void;
-    onBack: () => void;
-    allInterests: string[];
-}> = ({ currentFilters, onApply, onBack, allInterests }) => {
-    const [tempFilters, setTempFilters] = useState(currentFilters);
-
-    const handleAgeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = e.target;
-        let newMin = tempFilters.ageRange.min;
-        let newMax = tempFilters.ageRange.max;
-
-        if (name === 'min') {
-            newMin = Math.min(parseInt(value), tempFilters.ageRange.max);
-        } else {
-            newMax = Math.max(parseInt(value), tempFilters.ageRange.min);
-        }
-        
-        setTempFilters(prev => ({
-            ...prev,
-            ageRange: { min: newMin, max: newMax }
-        }));
-    };
-    
-    const handleDistanceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setTempFilters(prev => ({
-            ...prev,
-            maxDistance: parseInt(e.target.value)
-        }));
-    };
-
-    const handleInterestToggle = (interest: string) => {
-        setTempFilters(prev => {
-            const newInterests = prev.interests.includes(interest)
-                ? prev.interests.filter(i => i !== interest)
-                : [...prev.interests, interest];
-            return { ...prev, interests: newInterests };
-        });
-    };
-    
-    const handleApply = () => {
-        onApply(tempFilters);
-    };
-
-    const handleReset = () => {
-      const resetFilters = { ageRange: { min: 18, max: 99 }, interests: [], maxDistance: 100 };
-      setTempFilters(resetFilters);
-    }
-    
-    const handleGoalChange = (goal: string) => {
-        setTempFilters(prev => ({
-            ...prev,
-            relationshipGoal: goal === prev.relationshipGoal ? undefined : goal
-        }));
-    };
-    
-    const handleLifestyleToggle = (category: keyof Lifestyle, value: string) => {
-        setTempFilters(prev => {
-            const currentValues = prev.lifestyle?.[category] || [];
-            const newValues = currentValues.includes(value)
-                ? currentValues.filter(v => v !== value)
-                : [...currentValues, value];
-            
-            return {
-                ...prev,
-                lifestyle: {
-                    ...prev.lifestyle,
-                    [category]: newValues.length > 0 ? newValues : undefined
-                }
-            };
-        });
-    };
-
-    return (
-        <div className="flex flex-col h-full bg-white">
-            <header className="flex items-center p-4 border-b sticky top-0 bg-white z-10">
-                <button title="Back" onClick={onBack} className="text-gray-600 mr-4 text-2xl" aria-label="Go back">&larr;</button>
-                <h2 className="font-bold text-xl text-gray-800">Filter Profiles</h2>
-            </header>
-            <div className="p-6 space-y-6 flex-1 overflow-y-auto">
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Distance</label>
-                    <div className="flex items-center justify-between text-gray-600">
-                        <span>1 mile</span>
-                        <span className="font-semibold text-pink-600">{tempFilters.maxDistance} miles</span>
-                        <span>100 miles</span>
-                    </div>
-                    <input type="range" value={tempFilters.maxDistance} onChange={handleDistanceChange} min="1" max="100" className="w-full accent-pink-500 mt-2" />
-                </div>
-                
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Age Range</label>
-                    <div className="flex items-center justify-between text-gray-600">
-                        <span className="font-semibold text-pink-600">{tempFilters.ageRange.min}</span>
-                        <span className="font-semibold text-pink-600">{tempFilters.ageRange.max}</span>
-                    </div>
-                    <div className="mt-2 relative h-5 flex items-center">
-                         <input type="range" name="min" value={tempFilters.ageRange.min} onChange={handleAgeChange} min="18" max="99" className="absolute w-full accent-pink-500" style={{ zIndex: tempFilters.ageRange.min > 58 ? 1 : 0 }}/>
-                        <input type="range" name="max" value={tempFilters.ageRange.max} onChange={handleAgeChange} min="18" max="99" className="absolute w-full accent-pink-500" />
-                    </div>
-                </div>
-
-                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Relationship Goal</label>
-                    <div className="flex flex-wrap gap-2">
-                        {RELATIONSHIP_GOALS.map(goal => (
-                            <button 
-                                key={goal}
-                                onClick={() => handleGoalChange(goal)}
-                                className={`text-sm border px-3 py-1 rounded-full transition-colors ${tempFilters.relationshipGoal === goal ? 'bg-purple-100 border-purple-500 text-purple-700' : 'bg-white border-gray-300 text-gray-700'}`}
+                 {/* Developer Tools Section */}
+                <div className="mt-8 p-4 border-t border-dashed border-gray-300 bg-gray-50 rounded-lg">
+                    <h3 className="font-bold text-gray-700 mb-2">Developer Tools</h3>
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Switch User</label>
+                            <select 
+                                onChange={(e) => onSwitchUser(parseInt(e.target.value))}
+                                className="w-full p-2 border rounded bg-white text-sm"
+                                value={editedUser.id}
                             >
-                                {goal}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Lifestyle</label>
-                    
-                    <div className="mb-2">
-                        <span className="text-xs text-gray-500 block mb-1">Smoking</span>
-                        <div className="flex flex-wrap gap-2">
-                            {LIFESTYLE_OPTIONS.smoking.map(opt => (
-                                <button key={opt} onClick={() => handleLifestyleToggle('smoking', opt)} className={`text-xs border px-2 py-1 rounded-lg ${tempFilters.lifestyle?.smoking?.includes(opt) ? 'bg-gray-200 border-gray-400 font-semibold' : 'bg-white'}`}>{opt}</button>
-                            ))}
+                                {allUsers.map(u => (
+                                    <option key={u.id} value={u.id}>{u.name} ({u.id === editedUser.id ? 'Current' : u.id})</option>
+                                ))}
+                            </select>
                         </div>
-                    </div>
-                     <div className="mb-2">
-                        <span className="text-xs text-gray-500 block mb-1">Drinking</span>
-                        <div className="flex flex-wrap gap-2">
-                            {LIFESTYLE_OPTIONS.drinking.map(opt => (
-                                <button key={opt} onClick={() => handleLifestyleToggle('drinking', opt)} className={`text-xs border px-2 py-1 rounded-lg ${tempFilters.lifestyle?.drinking?.includes(opt) ? 'bg-gray-200 border-gray-400 font-semibold' : 'bg-white'}`}>{opt}</button>
-                            ))}
-                        </div>
-                    </div>
-                     <div>
-                        <span className="text-xs text-gray-500 block mb-1">Exercise</span>
-                        <div className="flex flex-wrap gap-2">
-                            {LIFESTYLE_OPTIONS.exercise.map(opt => (
-                                <button key={opt} onClick={() => handleLifestyleToggle('exercise', opt)} className={`text-xs border px-2 py-1 rounded-lg ${tempFilters.lifestyle?.exercise?.includes(opt) ? 'bg-gray-200 border-gray-400 font-semibold' : 'bg-white'}`}>{opt}</button>
-                            ))}
+                         <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Force Match With</label>
+                            <select 
+                                onChange={(e) => {
+                                    if(e.target.value) {
+                                        onForceMatch(parseInt(e.target.value));
+                                        e.target.value = ""; // Reset
+                                    }
+                                }}
+                                className="w-full p-2 border rounded bg-white text-sm"
+                            >
+                                <option value="">Select user to match...</option>
+                                {allUsers.filter(u => u.id !== editedUser.id).map(u => (
+                                    <option key={u.id} value={u.id}>{u.name}</option>
+                                ))}
+                            </select>
                         </div>
                     </div>
                 </div>
-
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Interests</label>
-                    <div className="flex flex-wrap gap-2">
-                        {allInterests.map(interest => {
-                            const isSelected = tempFilters.interests.includes(interest);
-                            return (
-                                <button
-                                    key={interest}
-                                    type="button"
-                                    onClick={() => handleInterestToggle(interest)}
-                                    className={`text-sm font-semibold px-3 py-1 rounded-full border transition-colors ${
-                                        isSelected 
-                                        ? 'bg-pink-500 border-pink-500 text-white' 
-                                        : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-                                    }`}
-                                >
-                                    {interest}
-                                </button>
-                            );
-                        })}
-                    </div>
-                </div>
-            </div>
-            <div className="p-4 border-t sticky bottom-0 bg-white z-10 grid grid-cols-2 gap-4">
-                <button onClick={handleReset} className="w-full bg-gray-200 text-gray-700 font-bold py-3 rounded-full hover:bg-gray-300 transition-colors">
-                    Reset
-                </button>
-                <button onClick={handleApply} className="w-full bg-gradient-to-r from-pink-500 to-orange-400 text-white font-bold py-3 rounded-full shadow-lg hover:scale-105 transition-transform">
-                    Apply
-                </button>
             </div>
         </div>
     );
 };
 
+const App = () => {
+  const [showSplash, setShowSplash] = useState(true);
+  const [activeView, setActiveView] = useState('swipe');
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  
+  // App Data State
+  const [users, setUsers] = useState<User[]>([]);
+  const [likes, setLikes] = useState<Record<number, number[]>>({});
+  const [matches, setMatches] = useState<Match[]>([]);
+  const [messages, setMessages] = useState<Record<string, Message[]>>({});
+  const [blockedUsers, setBlockedUsers] = useState<number[]>([]);
+  
+  // UI State
+  const [matchNotification, setMatchNotification] = useState<{ user: User; isSuperLike: boolean } | null>(null);
+  const [selectedUserForDetail, setSelectedUserForDetail] = useState<User | null>(null);
+  const [currentChatUser, setCurrentChatUser] = useState<User | null>(null);
+  const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
 
-// --- Main App Component ---
+  const [filters, setFilters] = useState<Filters>({
+    ageRange: { min: 18, max: 50 },
+    interests: [],
+    maxDistance: 50,
+    relationshipGoal: '',
+    lifestyle: {}
+  });
 
-export default function App() {
-    const [showSplash, setShowSplash] = useState(true);
-    const [users, setUsers] = useState<User[]>([]);
-    // Initialize currentUserId from localStorage if available, else null
-    const [currentUserId, setCurrentUserId] = useState<number | null>(() => {
-        const savedId = localStorage.getItem('gemini-cupid-current-user-id');
-        return savedId ? parseInt(savedId) : null;
-    });
-    
-    const [currentIndex, setCurrentIndex] = useState(0);
-    // Replace local likedIds with derived logic from persistent store
-    const [likedIds, setLikedIds] = useState<Set<number>>(new Set());
-    const [superLikedIds, setSuperLikedIds] = useState<Set<number>>(new Set());
-    const [blockedUserIds, setBlockedUserIds] = useState<Set<number>>(new Set());
-    const [matches, setMatches] = useState<Match[]>([]);
-    const [newMatch, setNewMatch] = useState<{ user: User, isSuperLike: boolean } | null>(null);
-    const [activeView, setActiveView] = useState('swipe'); // 'swipe', 'profile', 'matches', 'chat', 'auth', 'requests', 'filters'
-    const [activeChatUser, setActiveChatUser] = useState<User | null>(null);
-    const [detailedProfileUser, setDetailedProfileUser] = useState<User | null>(null);
-    const [action, setAction] = useState<'like' | 'pass' | 'superlike' | null>(null);
-    const [filters, setFilters] = useState<Filters>({ ageRange: { min: 18, max: 99 }, interests: [], maxDistance: 50 });
-    const [messages, setMessages] = useState<Record<string, Message[]>>({});
-    
-    const [lastAction, setLastAction] = useState<{ user: User; index: number; type: 'like' | 'pass' | 'superlike' } | null>(null);
-    const undoTimeoutRef = useRef<number | null>(null);
-    const currentActionRef = useRef<'like' | 'pass' | 'superlike' | null>(null);
-    
-    const [friendRequests, setFriendRequests] = useState<Set<number>>(new Set());
-    const [currentUserCoords, setCurrentUserCoords] = useState<{ lat: number; lon: number } | null>(null);
-
-    // Load Users from LocalStorage or Seed
-    useEffect(() => {
-        const savedUsersJSON = localStorage.getItem('gemini-cupid-users');
-        if (savedUsersJSON) {
-            try {
-                const savedUsers = JSON.parse(savedUsersJSON);
-                setUsers(savedUsers);
-            } catch (e) {
-                console.error("Failed to load users", e);
-                setUsers(INITIAL_USERS);
-            }
-        } else {
-            setUsers(INITIAL_USERS);
-        }
-    }, []);
-
-    // Save Users to LocalStorage whenever they change
-    useEffect(() => {
-        if (users.length > 0) {
-            localStorage.setItem('gemini-cupid-users', JSON.stringify(users));
-        }
-    }, [users]);
-
-    // Handle Login/Logout persistence and State Updates
-    useEffect(() => {
-        if (currentUserId) {
-            localStorage.setItem('gemini-cupid-current-user-id', currentUserId.toString());
-            if (activeView === 'auth') setActiveView('swipe');
-
-            // Calculate interactions based on persistent store
-            const allLikes = getStoredLikes();
-            const myLikes = allLikes[currentUserId] || [];
-            const incomingLikes: number[] = [];
-            
-            // Find who liked me
-            Object.entries(allLikes).forEach(([likerId, likedList]) => {
-                 if (likedList.includes(currentUserId)) {
-                     incomingLikes.push(parseInt(likerId));
-                 }
-            });
-
-            const newMatches: Match[] = [];
-            const newRequests = new Set<number>();
-            const newLikedIds = new Set<number>(myLikes);
-
-            incomingLikes.forEach(likerId => {
-                if (myLikes.includes(likerId)) {
-                    // Mutual Like -> Match
-                    const otherUser = users.find(u => u.id === likerId);
-                    const me = users.find(u => u.id === currentUserId);
-                    if (otherUser && me) {
-                        newMatches.push({
-                            id: [currentUserId, likerId].sort().join('-'),
-                            users: [me, otherUser],
-                            timestamp: new Date(), // In a real app, fetch from DB
-                            isSuperLike: false
-                        });
-                    }
-                } else {
-                    // Only they liked me -> Request
-                    newRequests.add(likerId);
-                }
-            });
-            
-            setLikedIds(newLikedIds);
-            setMatches(newMatches);
-            setFriendRequests(newRequests);
-
-        } else {
-            localStorage.removeItem('gemini-cupid-current-user-id');
-            setActiveView('auth');
-        }
-    }, [currentUserId, activeView, users]);
-
-    // Load blocked users
-    useEffect(() => {
-        const savedBlockedIdsJSON = localStorage.getItem('gemini-cupid-blocked-ids');
-        if (savedBlockedIdsJSON) {
-            try {
-                const savedBlockedIds = JSON.parse(savedBlockedIdsJSON);
-                if (Array.isArray(savedBlockedIds)) {
-                    const numericIds = savedBlockedIds.filter((id): id is number => typeof id === 'number');
-                    setBlockedUserIds(new Set<number>(numericIds));
-                }
-            } catch (error) {
-                console.error("Failed to parse blocked IDs from localStorage", error);
-            }
-        }
-        
-        // Get user location
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                setCurrentUserCoords({
-                    lat: position.coords.latitude,
-                    lon: position.coords.longitude,
-                });
-            },
-            (error) => {
-                // Silently handle error for UX
-            }
-        );
-    }, []);
-
-    const updateBlockedIds = (newBlockedIds: Set<number>) => {
-        setBlockedUserIds(newBlockedIds);
-        localStorage.setItem('gemini-cupid-blocked-ids', JSON.stringify(Array.from(newBlockedIds)));
-    };
-    
-    const handleSignup = (newUser: User) => {
-        setUsers(prev => [...prev, newUser]);
-        setCurrentUserId(newUser.id);
-        // New users start fresh
-        setMatches([]);
-        setLikedIds(new Set());
-        setFriendRequests(new Set());
-        setActiveView('swipe');
-    };
-
-    const handleLogin = (user: User) => {
-        setCurrentUserId(user.id);
-        setActiveView('swipe');
+  // Initialize Data
+  useEffect(() => {
+    // Load Users (merge initial with any stored new users if we were to persist them properly in a real app)
+    // For now, we check localStorage for a custom users array, else use constants
+    const storedUsersStr = localStorage.getItem('gemini-cupid-users');
+    let loadedUsers = INITIAL_USERS;
+    if (storedUsersStr) {
+        try {
+            loadedUsers = JSON.parse(storedUsersStr);
+        } catch (e) { console.error("Failed to load users", e); }
+    } else {
+        localStorage.setItem('gemini-cupid-users', JSON.stringify(INITIAL_USERS));
     }
+    setUsers(loadedUsers);
 
-    const handleLogout = () => {
-        setCurrentUserId(null);
-        setActiveView('auth');
-        setCurrentIndex(0);
-        setMatches([]);
-        setMessages({});
-    }
-
-    const currentUser = useMemo(() => users.find(u => u.id === currentUserId), [users, currentUserId]);
+    // Load Likes
+    setLikes(getStoredLikes());
     
-    const profilesWithDistance = useMemo(() => {
-        if (!currentUser) return [];
-        
-        // Fallback if current user coords missing (GPS denied/error)
-        const myCoords = currentUserCoords || currentUser.coordinates;
+    // Load Matches (Simulated persistence)
+    const storedMatches = localStorage.getItem('gemini-cupid-matches');
+    if (storedMatches) setMatches(JSON.parse(storedMatches));
 
-        return users
-            .filter(u => u.id !== currentUserId)
-            .map(user => ({
-                ...user,
-                distance: getDistanceFromLatLonInMi(
-                    myCoords.lat,
-                    myCoords.lon,
-                    user.coordinates.lat,
-                    user.coordinates.lon
-                ),
-            }))
-            .sort((a, b) => a.distance - b.distance);
-    }, [users, currentUserCoords, currentUserId, currentUser]);
+    // Load Messages
+    const storedMessages = localStorage.getItem('gemini-cupid-messages');
+    if (storedMessages) setMessages(JSON.parse(storedMessages));
+  }, []);
 
-    const filteredProfiles = useMemo(() => {
-        // Filter out users we have already liked (unless we undid it, handled by local state sync)
-        // And blocked users, and private profiles
-        return profilesWithDistance
-            .filter(u => !blockedUserIds.has(u.id) && u.profileVisibility === 'public' && !likedIds.has(u.id))
-            .filter(user => {
-                const isAgeMatch = user.age >= filters.ageRange.min && user.age <= filters.ageRange.max;
-                const isInterestMatch = filters.interests.length === 0 || filters.interests.some(interest => user.interests.includes(interest));
-                const isDistanceMatch = user.distance !== undefined && user.distance <= filters.maxDistance;
-                
-                const isGoalMatch = !filters.relationshipGoal || user.relationshipGoal === filters.relationshipGoal;
-                
-                // Lifestyle filters
-                const isSmokingMatch = !filters.lifestyle?.smoking || (user.lifestyle?.smoking && filters.lifestyle.smoking.includes(user.lifestyle.smoking));
-                const isDrinkingMatch = !filters.lifestyle?.drinking || (user.lifestyle?.drinking && filters.lifestyle.drinking.includes(user.lifestyle.drinking));
-                const isExerciseMatch = !filters.lifestyle?.exercise || (user.lifestyle?.exercise && filters.lifestyle.exercise.includes(user.lifestyle.exercise));
+  // Geolocation Effect
+  useEffect(() => {
+      if (!currentUser) return;
+      if ('geolocation' in navigator) {
+          navigator.geolocation.getCurrentPosition(
+              (position) => {
+                  const updatedUser = {
+                      ...currentUser,
+                      coordinates: {
+                          lat: position.coords.latitude,
+                          lon: position.coords.longitude
+                      }
+                  };
+                  setCurrentUser(updatedUser);
+                  // Update in users array too
+                  setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
+              },
+              (error) => {
+                  console.error("Geolocation error:", error.message);
+                  // Fallback is already handled by default data, no action needed
+              }
+          );
+      }
+  }, [currentUser?.id]);
 
-                return isAgeMatch && isInterestMatch && isDistanceMatch && isGoalMatch && isSmokingMatch && isDrinkingMatch && isExerciseMatch;
-            });
-    }, [profilesWithDistance, filters, blockedUserIds, likedIds]);
-    
-    const allInterests = useMemo(() => {
-        const interestsSet = new Set<string>();
-        users.forEach(user => {
-            // Just collect all interests globally for the filter list
-            user.interests.forEach(interest => interestsSet.add(interest));
-        });
-        return Array.from(interestsSet).sort();
-    }, [users]); // Update when users change (e.g. new signup)
+  // Derived State: Unread Counts
+  const unreadMatchesCount = useMemo(() => {
+      if (!currentUser) return 0;
+      let count = 0;
+      matches.forEach(m => {
+          const other = m.users.find(u => u.id !== currentUser.id);
+          if (!other) return;
+          const chatMsgs = messages[m.id] || [];
+          const last = chatMsgs[chatMsgs.length - 1];
+          if (last && last.senderId !== currentUser.id && !last.read) {
+              count++;
+          }
+      });
+      return count;
+  }, [matches, messages, currentUser]);
 
-    const topProfileId = useMemo(() => {
-        return currentIndex < filteredProfiles.length ? filteredProfiles[currentIndex].id : null;
-    }, [currentIndex, filteredProfiles]);
+  const requestsCount = useMemo(() => {
+      if (!currentUser) return 0;
+      // Users who liked current user, but current user hasn't liked back yet (no match)
+      const likerIds = Object.entries(likes).filter(([fromId, toIds]) => {
+          return (toIds as number[]).includes(currentUser.id);
+      }).map(([fromId]) => parseInt(fromId));
 
-    useEffect(() => {
-        if (topProfileId !== null) {
-            const timer = setTimeout(() => {
-                // Update view count in local state and persist
-                setUsers(prevUsers =>
-                    prevUsers.map(u =>
-                        u.id === topProfileId
-                            ? { ...u, viewCount: (u.viewCount || 0) + 1 }
-                            : u
-                    )
-                );
-            }, 500); 
-            return () => clearTimeout(timer);
-        }
-    }, [topProfileId]);
+      // Filter out existing matches
+      const matchIds = matches.flatMap(m => m.users.map(u => u.id));
+      return likerIds.filter(id => !matchIds.includes(id)).length;
+  }, [likes, matches, currentUser]);
 
-    const handleCardSwiped = (direction: 'right' | 'left') => {
-        if (currentIndex >= filteredProfiles.length || !currentUser) return;
+  const unreadChatsList = useMemo(() => {
+      if (!currentUser) return [];
+      return matches.map(m => {
+          const other = m.users.find(u => u.id !== currentUser.id);
+          if (!other) return null;
+          const chatMsgs = messages[m.id] || [];
+          const unreadCount = chatMsgs.filter(msg => msg.senderId !== currentUser.id && !msg.read).length;
+          return unreadCount > 0 ? { user: other, count: unreadCount } : null;
+      }).filter(Boolean) as { user: User, count: number }[];
+  }, [matches, messages, currentUser]);
 
-        if (undoTimeoutRef.current) {
-            clearTimeout(undoTimeoutRef.current);
-        }
+  const pendingRequestsList = useMemo(() => {
+      if (!currentUser) return [];
+      const likerIds = Object.entries(likes)
+        .filter(([fromId, toIds]) => (toIds as number[]).includes(currentUser.id))
+        .map(([fromId]) => parseInt(fromId));
+      
+       // Filter out matches and blocked
+      const matchUserIds = matches.flatMap(m => m.users.map(u => u.id));
+      return users.filter(u => likerIds.includes(u.id) && !matchUserIds.includes(u.id) && !blockedUsers.includes(u.id));
+  }, [likes, matches, currentUser, users, blockedUsers]);
 
-        const swipedUser = filteredProfiles[currentIndex];
-        let swipeType: 'like' | 'pass' | 'superlike';
 
-        if (currentActionRef.current) {
-            swipeType = currentActionRef.current;
-            currentActionRef.current = null;
-        } else {
-            swipeType = direction === 'right' ? 'like' : 'pass';
-        }
-        
-        setLastAction({ user: swipedUser, index: currentIndex, type: swipeType });
+  // --- Actions ---
 
-        undoTimeoutRef.current = window.setTimeout(() => {
-            setLastAction(null);
-            undoTimeoutRef.current = null;
-        }, 5000);
+  const handleSignup = (newUser: User) => {
+      const updatedUsers = [...users, newUser];
+      setUsers(updatedUsers);
+      localStorage.setItem('gemini-cupid-users', JSON.stringify(updatedUsers));
+      setCurrentUser(newUser);
+      setActiveView('swipe');
+  };
 
-        if (direction === 'right') {
-            const likedUser = swipedUser;
-            const wasSuperLike = swipeType === 'superlike';
-            
-            // PERSISTENCE: Save the like to storage
-            saveStoredLike(currentUser.id, likedUser.id);
+  const handleSwipe = (direction: 'left' | 'right', swipedUser: User) => {
+    if (!currentUser) return;
 
-            const newLikedIds = new Set<number>(likedIds).add(likedUser.id);
-            setLikedIds(newLikedIds);
+    if (direction === 'right') {
+        // Save Like
+        const newLikes = saveStoredLike(currentUser.id, swipedUser.id);
+        setLikes(newLikes);
 
-            if (wasSuperLike) {
-                const newSuperLikedIds = new Set<number>(superLikedIds).add(likedUser.id);
-                setSuperLikedIds(newSuperLikedIds);
-            }
-            
-            // CHECK FOR MATCH: Did they like me?
-            const allLikes = getStoredLikes();
-            const isMutual = allLikes[likedUser.id] && allLikes[likedUser.id].includes(currentUser.id);
-
-            if (isMutual) {
-                const newMatchData: Match = { 
-                    id: [currentUser.id, likedUser.id].sort().join('-'), 
-                    users: [currentUser, likedUser], 
-                    timestamp: new Date(), 
-                    isSuperLike: wasSuperLike 
-                };
-                
-                setMatches(prevMatches => [...prevMatches, newMatchData]);
-                setNewMatch({ user: likedUser, isSuperLike: wasSuperLike });
-                
-                // Remove from requests if it was there
-                setFriendRequests(prev => {
-                    const newSet = new Set<number>(prev);
-                    newSet.delete(likedUser.id);
-                    return newSet;
-                });
-
-            } else {
-                setCurrentIndex(prevIndex => prevIndex + 1);
-            }
-        } else { // 'left'
-            setCurrentIndex(prevIndex => prevIndex + 1);
-        }
-    };
-
-    const handleUndo = () => {
-        if (!lastAction || !currentUser) return;
-
-        if (undoTimeoutRef.current) {
-            clearTimeout(undoTimeoutRef.current);
-            undoTimeoutRef.current = null;
-        }
-
-        const { user, index, type } = lastAction;
-
-        setCurrentIndex(index);
-
-        if (type === 'like' || type === 'superlike') {
-            // PERSISTENCE: Remove the like
-            removeStoredLike(currentUser.id, user.id);
-
-            setLikedIds(prev => {
-                const newSet = new Set<number>(prev);
-                newSet.delete(user.id);
-                return newSet;
-            });
-
-            if (type === 'superlike') {
-                setSuperLikedIds(prev => {
-                    const newSet = new Set<number>(prev);
-                    newSet.delete(user.id);
-                    return newSet;
-                });
-            }
-
-            const matchId = [currentUser.id, user.id].sort().join('-');
-            const wasMatch = matches.some(m => m.id === matchId);
-            if (wasMatch) {
-                setMatches(prev => prev.filter(m => m.id !== matchId));
-            }
-        }
-        
-        if (newMatch?.user.id === user.id) {
-            setNewMatch(null);
-        }
-
-        setLastAction(null);
-    };
-    
-    const handleAcceptRequest = (userId: number) => {
-        if (!currentUser) return;
-        const likedUser = users.find(u => u.id === userId);
-        if (!likedUser) return;
-        
-        // PERSISTENCE: I accept, meaning I like them back
-        saveStoredLike(currentUser.id, userId);
-        
-        setMatches(prevMatches => [
-            ...prevMatches,
-            { id: [currentUser.id, userId].sort().join('-'), users: [currentUser, likedUser], timestamp: new Date(), isSuperLike: false }
-        ]);
-        
-        setNewMatch({ user: likedUser, isSuperLike: false });
-        
-        setFriendRequests(prev => {
-            const newSet = new Set<number>(prev);
-            newSet.delete(userId);
-            return newSet;
-        });
-    };
-
-    const handleRejectRequest = (userId: number) => {
-        // Visually remove from list, essentially a 'pass' but specific to requests
-        // We could persist a 'pass' so they don't show up again, or just remove locally
-        setFriendRequests(prev => {
-            const newSet = new Set<number>(prev);
-            newSet.delete(userId);
-            return newSet;
-        });
-    };
-
-    const handleKeepSwiping = () => {
-        setNewMatch(null);
-        setCurrentIndex(prevIndex => prevIndex + 1);
-    };
-    
-    useEffect(() => {
-        if (action) {
-            const timer = setTimeout(() => setAction(null), ANIMATION_DURATION);
-            return () => clearTimeout(timer);
-        }
-    }, [action]);
-
-    const handleSendMessage = (chatId: string, type: 'text' | 'sticker' | 'voice', content: string) => {
-        if (content.trim() === '' && type === 'text') return;
-        if (!currentUserId) return;
-
-        const newMessage: Message = {
-            id: `${Date.now()}-${Math.random()}`,
-            senderId: currentUserId,
-            timestamp: new Date(),
-            type,
-            content,
-            read: false
-        };
-        
-        // Mark previous messages from the other person as read when I send a message (simulated read logic)
-        setMessages(prev => {
-            const existingMessages = prev[chatId] || [];
-            // For demo: assume if I am sending a message, I have read theirs.
-            const updatedMessages = existingMessages.map(m => 
-                m.senderId !== currentUserId ? { ...m, read: true } : m
-            );
-
-            return { ...prev, [chatId]: [...updatedMessages, newMessage] };
-        });
-    };
-
-    const handleStartChat = () => {
-        if(newMatch){
-             setActiveChatUser(newMatch.user);
-             setActiveView('chat');
-             setNewMatch(null);
-             
-             // Mark messages as read when opening
-             if (currentUser) {
-                const chatId = [currentUser.id, newMatch.user.id].sort().join('-');
-                markChatAsRead(chatId, newMatch.user.id);
-             }
-        }
-    }
-    
-    const handleSelectChat = (user: User) => {
-        setActiveChatUser(user);
-        setActiveView('chat');
-        
-        if (currentUser) {
-            const chatId = [currentUser.id, user.id].sort().join('-');
-            markChatAsRead(chatId, user.id);
-        }
-    }
-
-    const markChatAsRead = (chatId: string, otherUserId: number) => {
-        setMessages(prev => {
-            const chatMessages = prev[chatId] || [];
-            const updatedMessages = chatMessages.map(m => 
-                m.senderId === otherUserId ? { ...m, read: true } : m
-            );
-            return { ...prev, [chatId]: updatedMessages };
-        });
-    };
-    
-    const handleBackToMatches = () => {
-        setActiveChatUser(null);
-        setActiveView('matches');
-    }
-    
-    const handleSaveProfile = (updatedUser: User) => {
-        setUsers(prevUsers => prevUsers.map(u => u.id === updatedUser.id ? updatedUser : u));
-        // No need to manually save to LS here as the useEffect[users] handles it
-        setActiveView('swipe');
-    };
-    
-    const handleApplyFilters = (newFilters: Filters) => {
-        setFilters(newFilters);
-        setCurrentIndex(0); // Reset swipe deck
-        setActiveView('swipe');
-    };
-    
-    const handleBlockUser = (userIdToBlock: number) => {
-        const userToBlock = users.find(u => u.id === userIdToBlock);
-        if (!userToBlock) return;
-
-        if (window.confirm(`Are you sure you want to block ${userToBlock.name}? You won't see their profile again.`)) {
-            const newBlockedIds = new Set<number>(blockedUserIds);
-            newBlockedIds.add(userIdToBlock);
-            updateBlockedIds(newBlockedIds);
-        }
-    };
-    
-    const handleUnblockUser = (userIdToUnblock: number) => {
-        const newBlockedIds = new Set<number>(blockedUserIds);
-        newBlockedIds.delete(userIdToUnblock);
-        updateBlockedIds(newBlockedIds);
-    };
-    
-    const handleSwitchUser = (userId: number) => {
-        setCurrentUserId(userId);
-        setActiveView('swipe');
-        setNewMatch(null);
-        setActiveChatUser(null);
-        // Note: In a real app, messages would be re-fetched here. 
-        // For this persistent demo, `messages` state holds everything by chatId, so it persists.
-    };
-    
-    const handleForceMatch = (targetUserId: number) => {
-        const targetUser = users.find(u => u.id === targetUserId);
-        if (!targetUser || !currentUser) return;
-        
-        const matchId = [currentUserId!, targetUserId].sort().join('-');
-        
-        // PERSISTENCE: Force both to like each other
-        saveStoredLike(currentUser.id, targetUserId);
-        saveStoredLike(targetUserId, currentUser.id);
-        
-        if (!matches.some(m => m.id === matchId)) {
-            setMatches(prev => [...prev, {
-                id: matchId,
-                users: [currentUser, targetUser],
+        // Check Match
+        if (newLikes[swipedUser.id]?.includes(currentUser.id)) {
+            const newMatch: Match = {
+                id: `${Math.min(currentUser.id, swipedUser.id)}-${Math.max(currentUser.id, swipedUser.id)}`,
+                users: [currentUser, swipedUser],
                 timestamp: new Date(),
                 isSuperLike: false
-            }]);
-            setNewMatch({ user: targetUser, isSuperLike: false });
-        } else {
-            alert(`You are already matched with ${targetUser.name}`);
+            };
+            const updatedMatches = [...matches, newMatch];
+            setMatches(updatedMatches);
+            localStorage.setItem('gemini-cupid-matches', JSON.stringify(updatedMatches));
+            setMatchNotification({ user: swipedUser, isSuperLike: false });
         }
-    };
-
-    const handleBackToSwipe = () => {
-        setActiveView('swipe');
-    };
-
-    const handleSplashFinished = () => {
-        setShowSplash(false);
-    };
-
-    if (showSplash) {
-        return <SplashScreen onFinished={handleSplashFinished} />;
     }
+  };
 
-    if (!currentUserId || !currentUser || activeView === 'auth') {
-        return <AuthScreen existingUsers={users} onLogin={handleLogin} onSignup={handleSignup} />;
-    }
+  const handleBlock = (userId: number) => {
+      setBlockedUsers([...blockedUsers, userId]);
+  };
 
-    const renderView = () => {
-        const blockedUsers = users.filter(u => blockedUserIds.has(u.id));
+  const handleSendMessage = (type: 'text' | 'sticker' | 'voice', content: string) => {
+      if (!currentUser || !currentChatUser) return;
+      
+      const match = matches.find(m => 
+          (m.users[0].id === currentUser.id && m.users[1].id === currentChatUser.id) || 
+          (m.users[1].id === currentUser.id && m.users[0].id === currentChatUser.id)
+      );
 
-        if (activeView === 'chat' && activeChatUser) {
-            const chatId = [currentUser.id, activeChatUser.id].sort().join('-');
-            return <ChatScreen
-                user={activeChatUser}
-                onBack={handleBackToMatches}
-                currentUser={currentUser}
-                messages={messages[chatId] || []}
-                onSendMessage={(type, content) => handleSendMessage(chatId, type, content)}
-            />;
-        }
-        
-        if (activeView === 'matches') {
-            return <MatchesScreen matches={matches} onSelectChat={handleSelectChat} currentUser={currentUser} />;
-        }
-        
-        if (activeView === 'profile') {
-            return <ProfileEditScreen 
-                user={currentUser} 
-                allUsers={users}
-                onSwitchUser={handleSwitchUser}
-                onForceMatch={handleForceMatch}
-                onSave={handleSaveProfile} 
-                onBack={handleBackToSwipe} 
-                blockedUsers={blockedUsers} 
-                onUnblock={handleUnblockUser}
-                onLogout={handleLogout}
-            />;
-        }
+      if (match) {
+          const newMessage: Message = {
+              id: Date.now().toString(),
+              senderId: currentUser.id,
+              timestamp: new Date(),
+              type,
+              content,
+              read: false
+          };
+          
+          const updatedMessages = {
+              ...messages,
+              [match.id]: [...(messages[match.id] || []), newMessage]
+          };
+          setMessages(updatedMessages);
+          localStorage.setItem('gemini-cupid-messages', JSON.stringify(updatedMessages));
+      }
+  };
 
-        if (activeView === 'filters') {
-            return <FilterScreen currentFilters={filters} onApply={handleApplyFilters} onBack={handleBackToSwipe} allInterests={allInterests} />;
-        }
-        
-        if (activeView === 'requests') {
-            const usersWhoLikeYou = users.filter(u => friendRequests.has(u.id));
-            return <RequestsScreen usersWhoLikeYou={usersWhoLikeYou} onAccept={handleAcceptRequest} onReject={handleRejectRequest} onBack={handleBackToSwipe} />;
-        }
+  const handleOpenChat = (user: User) => {
+      setCurrentChatUser(user);
+      setActiveView('chat');
+      setIsNotificationModalOpen(false);
 
-        // Default to swipe view
-        return (
-             <div className="flex-grow flex flex-col bg-gray-200 rounded-b-3xl overflow-hidden">
-                <div className="relative flex-grow p-4">
-                    {filteredProfiles.length > 0 && currentIndex < filteredProfiles.length ? (
-                        filteredProfiles.map((user, index) => {
-                             if (index < currentIndex) return null;
-                            const isTop = index === currentIndex;
-                            return (
-                                <SwipeableProfileCard
-                                    key={user.id}
-                                    user={user}
-                                    isTop={isTop}
-                                    onSwipe={handleCardSwiped}
-                                    onBlock={handleBlockUser}
-                                    onTap={setDetailedProfileUser}
-                                    action={isTop ? action : null}
-                                    style={{
-                                        zIndex: filteredProfiles.length - index,
-                                        transform: `scale(${1 - (index - currentIndex) * 0.05}) translateY(${(index - currentIndex) * -10}px)`,
-                                        opacity: index - currentIndex < 3 ? 1 : 0,
-                                        transition: 'transform 0.3s ease-out, opacity 0.3s ease-out',
-                                    }}
-                                />
-                            );
-                        }).reverse()
+      // Mark messages as read
+      if (!currentUser) return;
+      const match = matches.find(m => m.users.some(u => u.id === user.id) && m.users.some(u => u.id === currentUser.id));
+      if (match && messages[match.id]) {
+          const updatedChatMessages = messages[match.id].map(msg => 
+              msg.senderId !== currentUser.id ? { ...msg, read: true } : msg
+          );
+          const updatedMessages = { ...messages, [match.id]: updatedChatMessages };
+          setMessages(updatedMessages);
+          localStorage.setItem('gemini-cupid-messages', JSON.stringify(updatedMessages));
+      }
+  };
+
+  const handleSwitchUser = (userId: number) => {
+      const user = users.find(u => u.id === userId);
+      if (user) {
+          setCurrentUser(user);
+          setActiveView('swipe'); // Reset view
+          window.location.reload(); // Simple way to ensure full state reset for demo
+      }
+  };
+
+  const handleForceMatch = (targetId: number) => {
+      if (!currentUser) return;
+      const targetUser = users.find(u => u.id === targetId);
+      if (!targetUser) return;
+
+      // Force mutual likes
+      const l1 = saveStoredLike(currentUser.id, targetId);
+      const l2 = saveStoredLike(targetId, currentUser.id);
+      setLikes({...l1, ...l2}); // Merge for safety, though saveStoredLike reads from storage
+
+      // Create Match
+      const matchId = `${Math.min(currentUser.id, targetId)}-${Math.max(currentUser.id, targetId)}`;
+      if (!matches.some(m => m.id === matchId)) {
+          const newMatch: Match = {
+              id: matchId,
+              users: [currentUser, targetUser],
+              timestamp: new Date(),
+          };
+          const updatedMatches = [...matches, newMatch];
+          setMatches(updatedMatches);
+          localStorage.setItem('gemini-cupid-matches', JSON.stringify(updatedMatches));
+          alert(`Forced match with ${targetUser.name}! Check your matches tab.`);
+      } else {
+          alert("Already matched!");
+      }
+  };
+
+  // --- Filter Logic for Swipe Deck ---
+  const profiles = useMemo(() => {
+      if (!currentUser) return [];
+      
+      // 1. Filter out self, blocked, already matched, already liked (passed handled by UI usually, but let's filter for now)
+      let candidates = users.filter(u => u.id !== currentUser.id && !blockedUsers.includes(u.id));
+
+      // Filter out private profiles
+      candidates = candidates.filter(u => u.profileVisibility === 'public');
+
+      // Filter out existing matches
+      const matchIds = matches.flatMap(m => m.users.map(u => u.id));
+      candidates = candidates.filter(u => !matchIds.includes(u.id));
+      
+      // Filter out people we already liked (Friend requests handle the reverse)
+      const myLikes = likes[currentUser.id] || [];
+      candidates = candidates.filter(u => !myLikes.includes(u.id));
+
+      // 2. Apply Preferences Filters
+      candidates = candidates.filter(u => u.age >= filters.ageRange.min && u.age <= filters.ageRange.max);
+      
+      if (filters.relationshipGoal) {
+          candidates = candidates.filter(u => u.relationshipGoal === filters.relationshipGoal);
+      }
+      
+      if (filters.lifestyle) {
+          if (filters.lifestyle.smoking && filters.lifestyle.smoking.length > 0) {
+              candidates = candidates.filter(u => u.lifestyle?.smoking && filters.lifestyle!.smoking!.includes(u.lifestyle.smoking));
+          }
+          if (filters.lifestyle.drinking && filters.lifestyle.drinking.length > 0) {
+              candidates = candidates.filter(u => u.lifestyle?.drinking && filters.lifestyle!.drinking!.includes(u.lifestyle.drinking));
+          }
+          if (filters.lifestyle.exercise && filters.lifestyle.exercise.length > 0) {
+              candidates = candidates.filter(u => u.lifestyle?.exercise && filters.lifestyle!.exercise!.includes(u.lifestyle.exercise));
+          }
+      }
+
+      // 3. Calculate Distance & Sort
+      const withDist = candidates.map(u => {
+          const dist = getDistanceFromLatLonInMi(
+              currentUser.coordinates.lat, currentUser.coordinates.lon,
+              u.coordinates.lat, u.coordinates.lon
+          );
+          return { ...u, distance: dist };
+      });
+
+      // Filter by max distance
+      const nearby = withDist.filter(u => u.distance <= filters.maxDistance);
+      
+      // Sort by distance
+      return nearby.sort((a, b) => a.distance - b.distance);
+
+  }, [users, currentUser, blockedUsers, matches, likes, filters]);
+
+
+  if (showSplash) {
+      return <SplashScreen onFinished={() => setShowSplash(false)} />;
+  }
+
+  if (!currentUser) {
+      return <AuthScreen existingUsers={users} onLogin={setCurrentUser} onSignup={handleSignup} />;
+  }
+
+  return (
+      <div className="max-w-md mx-auto h-[100dvh] bg-gray-100 shadow-2xl overflow-hidden relative font-sans">
+        {/* Top Navigation / Header (except in chat) */}
+        {activeView !== 'chat' && (
+            <>
+                 {/* Top Bar for Swipe View */}
+                 {activeView === 'swipe' && (
+                    <div className="absolute top-0 left-0 w-full p-4 z-20 flex justify-between items-center pointer-events-none">
+                         <div className="pointer-events-auto">
+                            <GeminiCupidLogo className="w-8 h-8 text-pink-500 drop-shadow-md" />
+                         </div>
+                         <div className="pointer-events-auto relative">
+                            <button title="Notifications" onClick={() => setIsNotificationModalOpen(true)} className="bg-white/80 backdrop-blur-md p-2 rounded-full shadow-md hover:bg-white transition-colors">
+                                <BellIcon className="w-6 h-6 text-gray-600" />
+                                {(unreadMatchesCount > 0 || requestsCount > 0) && (
+                                    <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>
+                                )}
+                            </button>
+                         </div>
+                    </div>
+                 )}
+            </>
+        )}
+
+        <main className={`flex-1 relative h-[calc(100%-4rem)] ${activeView === 'chat' ? 'h-full' : ''}`}>
+            {activeView === 'swipe' && (
+                <div className="w-full h-full relative">
+                    {profiles.length > 0 ? (
+                        profiles.map((profile, index) => (
+                            <SwipeableProfileCard
+                                key={profile.id}
+                                user={profile}
+                                isTop={index === profiles.length - 1}
+                                onSwipe={(dir) => handleSwipe(dir, profile)}
+                                onBlock={handleBlock}
+                                onTap={setSelectedUserForDetail}
+                                action={null} // Simple demo, no programmatic swipe action state shown here for brevity
+                                style={{ zIndex: index }}
+                            />
+                        ))
                     ) : (
-                        <div className="flex items-center justify-center h-full text-center text-gray-500">
-                            <div>
-                                <p className="text-xl font-semibold">That's everyone for now!</p>
-                                <p>Adjust your filters or check back later.</p>
+                        <div className="flex flex-col items-center justify-center h-full text-center p-8">
+                            <div className="bg-white p-6 rounded-full shadow-lg mb-4 animate-bounce">
+                                <SparklesIcon className="w-12 h-12 text-pink-400" />
                             </div>
+                            <h2 className="text-2xl font-bold text-gray-700">No more profiles!</h2>
+                            <p className="text-gray-500 mt-2">Try adjusting your filters or check back later.</p>
+                            <button onClick={() => setActiveView('filters')} className="mt-6 text-pink-500 font-bold hover:underline">Adjust Filters</button>
                         </div>
                     )}
                 </div>
-                {currentIndex < filteredProfiles.length && (
-                    <div className="flex justify-center items-center gap-4 p-4 bg-white/50 backdrop-blur-sm">
-                         <button title="Undo" onClick={handleUndo} disabled={!lastAction} className="bg-white rounded-full p-3 text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg" aria-label="Undo">
-                            <UndoIcon className="w-6 h-6" />
-                        </button>
-                        <button title="Pass" onClick={() => { currentActionRef.current = 'pass'; setAction('pass'); }} className="bg-white rounded-full p-4 text-red-500 hover:scale-110 transition-transform shadow-lg" aria-label="Pass">
-                            <XMarkIcon className="w-8 h-8" />
-                        </button>
-                        <button title="Super Like" onClick={() => { currentActionRef.current = 'superlike'; setAction('superlike'); }} className="bg-white rounded-full p-3 text-blue-500 hover:scale-110 transition-transform shadow-lg" aria-label="Super Like">
-                            <StarIcon className="w-7 h-7" />
-                        </button>
-                        <button title="Like" onClick={() => { currentActionRef.current = 'like'; setAction('like'); }} className="bg-white rounded-full p-4 text-pink-500 hover:scale-110 transition-transform shadow-lg" aria-label="Like">
-                            <HeartIcon className="w-8 h-8" />
-                        </button>
-                    </div>
-                )}
-             </div>
-        );
-    };
+            )}
 
-    return (
-        <div className="h-screen w-screen max-w-md mx-auto flex flex-col font-sans bg-gray-100 antialiased relative">
-            {newMatch && currentUser && (
-                <MatchNotification
-                    currentUser={currentUser}
-                    matchedUser={newMatch.user}
-                    isSuperLike={newMatch.isSuperLike}
-                    onKeepSwiping={handleKeepSwiping}
-                    onStartChat={handleStartChat}
+            {activeView === 'matches' && (
+                <MatchesScreen 
+                    matches={matches} 
+                    currentUser={currentUser} 
+                    onSelectChat={handleOpenChat} 
+                    messages={messages}
                 />
             )}
-            {detailedProfileUser && (
-                <ProfileDetailScreen user={detailedProfileUser} onClose={() => setDetailedProfileUser(null)} />
+
+            {activeView === 'requests' && (
+                <RequestsScreen 
+                    usersWhoLikeYou={pendingRequestsList}
+                    onBack={() => setActiveView('swipe')}
+                    onAccept={(id) => handleSwipe('right', users.find(u => u.id === id)!)}
+                    onReject={(id) => handleBlock(id)}
+                />
             )}
-            
-            <main className="flex-grow flex flex-col overflow-hidden">
-                {renderView()}
-            </main>
-            
-            <Header activeView={activeView} setActiveView={setActiveView} requestsCount={friendRequests.size} />
-        </div>
-    );
-}
+
+            {activeView === 'filters' && (
+                <FilterScreen 
+                    filters={filters} 
+                    setFilters={setFilters} 
+                    onBack={() => setActiveView('swipe')} 
+                />
+            )}
+
+            {activeView === 'profile' && (
+                <ProfileEditScreen 
+                    user={currentUser} 
+                    allUsers={users}
+                    onSave={(updatedUser) => {
+                        const updatedList = users.map(u => u.id === updatedUser.id ? updatedUser : u);
+                        setUsers(updatedList);
+                        setCurrentUser(updatedUser);
+                        localStorage.setItem('gemini-cupid-users', JSON.stringify(updatedList));
+                        setActiveView('swipe');
+                    }}
+                    onBack={() => setActiveView('swipe')}
+                    onSwitchUser={handleSwitchUser}
+                    onForceMatch={handleForceMatch}
+                />
+            )}
+
+            {activeView === 'chat' && currentChatUser && (
+                <ChatScreen 
+                    user={currentChatUser} 
+                    currentUser={currentUser}
+                    onBack={() => setActiveView('matches')} 
+                    messages={matches.find(m => m.users.some(u => u.id === currentChatUser.id)) ? (messages[matches.find(m => m.users.some(u => u.id === currentChatUser.id))!.id] || []) : []}
+                    onSendMessage={handleSendMessage}
+                />
+            )}
+        </main>
+
+        {/* Bottom Navigation */}
+        {activeView !== 'chat' && (
+            <Header 
+                activeView={activeView} 
+                setActiveView={setActiveView} 
+                requestsCount={requestsCount}
+                unreadMatchesCount={unreadMatchesCount}
+            />
+        )}
+
+        {/* Overlays */}
+        {matchNotification && (
+            <MatchNotification 
+                currentUser={currentUser}
+                matchedUser={matchNotification.user}
+                isSuperLike={matchNotification.isSuperLike}
+                onKeepSwiping={() => setMatchNotification(null)}
+                onStartChat={() => {
+                    setMatchNotification(null);
+                    handleOpenChat(matchNotification.user);
+                }}
+            />
+        )}
+
+        {selectedUserForDetail && (
+            <ProfileDetailScreen 
+                user={selectedUserForDetail} 
+                onClose={() => setSelectedUserForDetail(null)} 
+            />
+        )}
+
+        {isNotificationModalOpen && (
+            <NotificationModal 
+                onClose={() => setIsNotificationModalOpen(false)}
+                requests={pendingRequestsList}
+                unreadChats={unreadChatsList}
+                onClickRequest={() => { setIsNotificationModalOpen(false); setActiveView('requests'); }}
+                onClickChat={(u) => handleOpenChat(u)}
+            />
+        )}
+
+      </div>
+  );
+};
+
+export default App;

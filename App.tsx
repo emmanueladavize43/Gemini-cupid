@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { User, Match, Message, RelationshipGoal, Lifestyle } from './types';
 import { INITIAL_USERS, EMOJIS, RELATIONSHIP_GOALS, LIFESTYLE_OPTIONS } from './constants';
 import { generateIcebreakers, generateQuickReplies } from './services/geminiService';
-import { HeartIcon, XMarkIcon, SparklesIcon, ChatBubbleIcon, FireIcon, UserIcon, AdjustmentsHorizontalIcon, EyeIcon, StarIcon, ShieldExclamationIcon, UndoIcon, UserPlusIcon, FaceSmileIcon, BoltIcon, VideoCameraIcon, MicrophoneIcon, PhoneIcon, VideoCameraSlashIcon, MicrophoneSlashIcon, PlayIcon, PauseIcon, MapPinIcon, GeminiCupidLogo, GoalIcon, SmokingIcon, DrinkingIcon, ExerciseIcon, CheckBadgeIcon, MagnifyingGlassIcon, BellIcon } from './components/Icons';
+import { HeartIcon, XMarkIcon, SparklesIcon, ChatBubbleIcon, FireIcon, UserIcon, AdjustmentsHorizontalIcon, EyeIcon, StarIcon, ShieldExclamationIcon, UndoIcon, UserPlusIcon, FaceSmileIcon, BoltIcon, VideoCameraIcon, MicrophoneIcon, PhoneIcon, VideoCameraSlashIcon, MicrophoneSlashIcon, PlayIcon, PauseIcon, MapPinIcon, GeminiCupidLogo, GoalIcon, SmokingIcon, DrinkingIcon, ExerciseIcon, CheckBadgeIcon, MagnifyingGlassIcon, BellIcon, CameraIcon } from './components/Icons';
 
 // --- Animation Constants ---
 const SWIPE_THRESHOLD = 120; // Min drag distance to trigger a swipe
@@ -1299,6 +1299,7 @@ const FilterScreen: React.FC<{ filters: Filters; setFilters: React.Dispatch<Reac
 const ProfileEditScreen: React.FC<{ user: User; onSave: (u: User) => void; onBack: () => void; allUsers: User[]; onSwitchUser: (id: number) => void; onForceMatch: (userId: number) => void; }> = ({ user, onSave, onBack, allUsers, onSwitchUser, onForceMatch }) => {
     const [editedUser, setEditedUser] = useState(user);
     const [interestInput, setInterestInput] = useState("");
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleAddInterest = () => {
         if (interestInput.trim() && !editedUser.interests.includes(interestInput.trim())) {
@@ -1318,6 +1319,17 @@ const ProfileEditScreen: React.FC<{ user: User; onSave: (u: User) => void; onBac
         });
     };
 
+    const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setEditedUser({ ...editedUser, imageUrl: reader.result as string });
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
     return (
         <div className="flex flex-col h-full bg-white overflow-y-auto">
              <header className="flex items-center p-4 border-b sticky top-0 bg-white z-10">
@@ -1327,13 +1339,22 @@ const ProfileEditScreen: React.FC<{ user: User; onSave: (u: User) => void; onBac
             </header>
             <div className="p-6 space-y-6">
                 <div className="flex justify-center">
-                    <div className="relative">
-                        <img src={editedUser.imageUrl} alt="Profile" className="w-32 h-32 rounded-full object-cover border-4 border-pink-100"/>
-                        <button className="absolute bottom-0 right-0 bg-pink-500 text-white p-2 rounded-full shadow-md">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" />
-                            </svg>
+                    <div className="relative group cursor-pointer">
+                        <img src={editedUser.imageUrl} alt="Profile" className="w-32 h-32 rounded-full object-cover border-4 border-pink-100" />
+                        <button 
+                            onClick={() => fileInputRef.current?.click()}
+                            className="absolute bottom-0 right-0 bg-pink-500 text-white p-2 rounded-full shadow-md hover:bg-pink-600 transition-colors"
+                            title="Change Profile Picture"
+                        >
+                             <CameraIcon className="w-5 h-5" />
                         </button>
+                        <input 
+                            type="file" 
+                            ref={fileInputRef} 
+                            className="hidden" 
+                            accept="image/*" 
+                            onChange={handleImageUpload} 
+                        />
                     </div>
                 </div>
 
